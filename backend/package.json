@@ -1,0 +1,9 @@
+{
+  "name": "programming-assistant-backend",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "python server.py",
+    "start": "python server.py"
+  }
+}
