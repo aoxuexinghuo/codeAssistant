@@ -39,9 +39,11 @@ def create_app() -> Flask:
         # 后面如果表结构开始频繁演进，再引入 Flask-Migrate。
         from . import models  # noqa: F401
         from .services.mistake_service import seed_sample_mistakes
+        from .services.rag_service import rebuild_rag_index
 
         db.create_all()
         seed_sample_mistakes()
+        rebuild_rag_index()
 
     return app
 

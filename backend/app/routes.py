@@ -15,6 +15,7 @@ from .services.mistake_service import (
 )
 from .services.mode_service import build_fallback_reply, get_mode_by_key, list_modes
 from .services.prompt_service import build_prompts
+from .services.rag_service import generate_rag_reply, rebuild_rag_index
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -200,6 +201,34 @@ def reorder_mistakes():
         return jsonify({"ok": False, "message": str(error)}), 400
 
     return jsonify({"ok": True, "data": records})
+
+
+@api_bp.route("/rag/rebuild", methods=["POST"])
+def rebuild_rag():
+    try:
+        result = rebuild_rag_index()
+    except Exception as error:
+        return jsonify({"ok": False, "message": "知识库索引重建失败", "detail": str(error)}), 500
+
+    return jsonify({"ok": True, "data": result})
+
+
+@api_bp.route("/rag/reply", methods=["POST"])
+def create_rag_reply():
+    body = request.get_json(silent=True) or {}
+    question = (body.get("question") or "").strip()
+
+    if not question:
+        return jsonify({"ok": False, "message": "question 字段不能为空"}), 400
+
+    try:
+        result = generate_rag_reply(question)
+    except Exception as error:
+        detail = str(error)
+        print("[rag] reply failed", {"question": question, "detail": detail})
+        return jsonify({"ok": False, "message": "知识库增强回答失败", "detail": detail}), 502
+
+    return jsonify({"ok": True, "data": result})
 
 
 def _validate_assistant_request():

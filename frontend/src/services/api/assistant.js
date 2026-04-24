@@ -92,6 +92,14 @@ export function createMistakesFromAssistant(payload) {
   return apiClient.post('/api/mistakes/from-assistant', payload)
 }
 
+export function fetchRagReply(payload) {
+  return apiClient.post('/api/rag/reply', payload)
+}
+
+export function rebuildRagIndex() {
+  return apiClient.post('/api/rag/rebuild', {})
+}
+
 export function deleteMistakeEntry(id) {
   return apiClient.delete(`/api/mistakes/${id}`)
 }

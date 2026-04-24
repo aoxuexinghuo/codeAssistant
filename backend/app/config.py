@@ -6,6 +6,10 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
+KNOWLEDGE_DIR = BASE_DIR / "knowledge"
+VECTOR_DIR = BASE_DIR / "vector_store"
+KNOWLEDGE_DIR.mkdir(parents=True, exist_ok=True)
+VECTOR_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @dataclass(frozen=True)
@@ -21,6 +25,11 @@ class Settings:
     llm_model: str = os.getenv("LLM_MODEL", "qvq-max-2025-03-25")
     llm_temperature: float = float(os.getenv("LLM_TEMPERATURE", "0.7"))
     llm_max_tokens: int = int(os.getenv("LLM_MAX_TOKENS", "1200"))
+    knowledge_dir: Path = KNOWLEDGE_DIR
+    rag_index_path: Path = DATA_DIR / "rag_index.json"
+    rag_top_k: int = int(os.getenv("RAG_TOP_K", "3"))
+    rag_chunk_size: int = int(os.getenv("RAG_CHUNK_SIZE", "500"))
+    rag_chunk_overlap: int = int(os.getenv("RAG_CHUNK_OVERLAP", "80"))
 
 
 settings = Settings()

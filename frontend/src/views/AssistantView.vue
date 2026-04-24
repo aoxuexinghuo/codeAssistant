@@ -11,6 +11,7 @@ import {
   deleteHistoryEntry,
   fetchHistory,
   fetchModes,
+  fetchRagReply,
   streamReply,
 } from '../services/api/assistant'
 
@@ -30,6 +31,8 @@ const historyKeyword = ref('')
 const historyModeFilter = ref('')
 const errorMessage = ref('')
 const autoExtractEnabled = ref(true)
+const ragEnabled = ref(false)
+const ragSources = ref([])
 const extractionMessage = ref('')
 const extractionState = ref('')
 let extractionTimer = null
@@ -100,34 +103,44 @@ async function submitQuestion() {
   errorMessage.value = ''
   extractionMessage.value = ''
   extractionState.value = ''
+  ragSources.value = []
   answer.value = ''
 
   try {
     let finalReply = ''
 
-    await streamReply(
-      {
-        mode: activeMode.value,
+    if (ragEnabled.value) {
+      const data = await fetchRagReply({
         question: question.value.trim(),
-      },
-      {
-        onChunk(chunk) {
-          answer.value += chunk
+      })
+      finalReply = data.reply
+      answer.value = data.reply
+      ragSources.value = data.sources || []
+    } else {
+      await streamReply(
+        {
+          mode: activeMode.value,
+          question: question.value.trim(),
         },
-        onDone(reply) {
-          finalReply = reply
-          answer.value = reply
-        },
-        onError(data) {
-          errorMessage.value = data.detail || data.message || '流式输出失败'
+        {
+          onChunk(chunk) {
+            answer.value += chunk
+          },
+          onDone(reply) {
+            finalReply = reply
+            answer.value = reply
+          },
+          onError(data) {
+            errorMessage.value = data.detail || data.message || '流式输出失败'
 
-          if (data.fallbackReply) {
-            answer.value = data.fallbackReply
-            finalReply = data.fallbackReply
-          }
-        },
-      }
-    )
+            if (data.fallbackReply) {
+              answer.value = data.fallbackReply
+              finalReply = data.fallbackReply
+            }
+          },
+        }
+      )
+    }
 
     if (!finalReply.trim()) {
       finalReply = answer.value
@@ -269,10 +282,13 @@ onMounted(() => {
         :mode-loading="modeLoading"
         :error-message="errorMessage"
         :auto-extract-enabled="autoExtractEnabled"
+        :rag-enabled="ragEnabled"
+        :rag-sources="ragSources"
         :extraction-message="extractionMessage"
         :extraction-state="extractionState"
         @update:question="question = $event"
         @update:auto-extract-enabled="autoExtractEnabled = $event"
+        @update:rag-enabled="ragEnabled = $event"
         @select-mode="activeMode = $event"
         @submit="submitQuestion"
       />

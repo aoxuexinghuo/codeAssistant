@@ -360,6 +360,62 @@ POST /api/mistakes/from-assistant
 - 如果是，则生成一张简短知识卡片。
 - 如果只是寒暄或无明确学习内容，则不生成。
 
+## RAG 框架说明
+
+当前项目已经加入第一版 RAG 框架，采用“本地 Markdown 知识库 + 轻量关键词检索”的方式先跑通整体流程。
+
+当前知识库目录：
+
+```text
+backend/knowledge
+```
+
+当前索引文件：
+
+```text
+backend/data/rag_index.json
+```
+
+当前 RAG 服务层：
+
+```text
+backend/app/services/embedding_service.py
+backend/app/services/retriever_service.py
+backend/app/services/rag_service.py
+```
+
+当前接口：
+
+```text
+POST /api/rag/rebuild
+POST /api/rag/reply
+```
+
+说明：
+
+- `/api/rag/rebuild` 用于读取 Markdown 并重建本地索引。
+- `/api/rag/reply` 用于根据问题检索资料片段，再调用模型生成回答。
+- 智能答疑页已加入“知识库增强”开关。
+- 开启知识库增强后，回答下方会展示参考来源。
+- 当前检索层是轻量实现，后续可以替换为 `Chroma` 或 `FAISS`。
+- 后端启动时会自动重建一次 RAG 索引，普通用户无需手动操作。
+
+当前已内置示例资料：
+
+```text
+backend/knowledge/c-struct.md
+backend/knowledge/c-pointer.md
+backend/knowledge/java-oop.md
+backend/knowledge/java-collections.md
+backend/knowledge/go-goroutine.md
+backend/knowledge/go-channel.md
+backend/knowledge/rust-ownership.md
+backend/knowledge/rust-result.md
+backend/knowledge/vue-reactivity.md
+backend/knowledge/vue-components.md
+backend/knowledge/algorithm-complexity.md
+```
+
 ## 当前提示词策略
 
 为了避免模型回答过长，当前答疑提示词默认要求：
@@ -382,7 +438,7 @@ POST /api/mistakes/from-assistant
 
 ### RAG
 
-后续可以将学习中心资料、课程文档、Markdown 笔记等接入 RAG：
+当前已完成第一版 RAG 框架。后续可以继续把轻量关键词检索升级为向量检索：
 
 ```text
 用户问题
@@ -392,12 +448,12 @@ POST /api/mistakes/from-assistant
 → 返回引用来源
 ```
 
-建议新增模块：
+建议后续替换或扩展：
 
 ```text
-backend/app/services/embedding_service.py
-backend/app/services/retriever_service.py
-backend/app/services/rag_service.py
+embedding_service.py：接入真实 Embedding
+retriever_service.py：替换为 Chroma 或 FAISS 检索
+rag_service.py：增加引用片段、相似度阈值和流式输出
 ```
 
 可选向量库：

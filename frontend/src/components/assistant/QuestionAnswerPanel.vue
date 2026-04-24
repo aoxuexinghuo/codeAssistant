@@ -44,6 +44,14 @@ defineProps({
     type: Boolean,
     default: true,
   },
+  ragEnabled: {
+    type: Boolean,
+    default: false,
+  },
+  ragSources: {
+    type: Array,
+    default: () => [],
+  },
   extractionMessage: {
     type: String,
     default: '',
@@ -54,7 +62,7 @@ defineProps({
   },
 })
 
-defineEmits(['update:question', 'update:autoExtractEnabled', 'submit', 'select-mode'])
+defineEmits(['update:question', 'update:autoExtractEnabled', 'update:ragEnabled', 'submit', 'select-mode'])
 </script>
 
 <template>
@@ -82,6 +90,14 @@ defineEmits(['update:question', 'update:autoExtractEnabled', 'submit', 'select-m
     <div class="answer-box">
       <h3>助手输出</h3>
       <MarkdownRenderer :content="answer" fallback="这里会显示回答内容。" />
+      <div v-if="ragSources.length" class="rag-source-list">
+        <span>参考来源</span>
+        <ul>
+          <li v-for="source in ragSources" :key="`${source.file}-${source.chunkIndex}`">
+            {{ source.title }} / {{ source.file }}
+          </li>
+        </ul>
+      </div>
     </div>
 
     <div class="composer">
@@ -104,6 +120,15 @@ defineEmits(['update:question', 'update:autoExtractEnabled', 'submit', 'select-m
             @change="$emit('update:autoExtractEnabled', $event.target.checked)"
           />
           <span>自动沉淀薄弱点</span>
+        </label>
+
+        <label class="inline-toggle">
+          <input
+            type="checkbox"
+            :checked="ragEnabled"
+            @change="$emit('update:ragEnabled', $event.target.checked)"
+          />
+          <span>知识库增强</span>
         </label>
 
         <p
