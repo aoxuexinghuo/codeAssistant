@@ -1,26 +1,32 @@
 <script setup>
 const highlights = [
   {
-    title: '模式化输出',
-    text: '同一个问题可以切换不同回答策略',
+    title: '三种答疑模式',
+    text: '调试、学习、面试，各自使用不同回答策略。',
   },
   {
-    title: '接口边界清晰',
-    text: '前端专注展示，后端专注模式和回复',
+    title: '薄弱点沉淀',
+    text: '答疑后自动整理可能需要复盘的知识点。',
   },
   {
-    title: '扩展成本低',
-    text: '新增功能时只需要补路由、控制器和视图',
+    title: '资料入口',
+    text: '按语言和框架进入官方学习资料。',
   },
 ]
 </script>
 
 <template>
-  <article class="hero-card">
-    <div class="badge">Frontend + Backend Separation</div>
-    <h1>基于大模型的编程答疑助手</h1>
+  <article class="hero-card auth-hero-panel">
+    <div class="brand-lockup">
+      <span class="brand-mark">PA</span>
+      <div>
+        <p class="badge">Programming Assistant</p>
+        <h1>编程学习助手</h1>
+      </div>
+    </div>
+
     <p class="subtitle">
-      面向调试、学习、面试三类场景的编程学习助手，帮助你更系统地理解知识、解决问题并积累经验。
+      面向编程学习、排错和面试准备的答疑工作台。
     </p>
 
     <div class="hero-grid">

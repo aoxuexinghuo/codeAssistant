@@ -1,4 +1,6 @@
 <script setup>
+import MarkdownRenderer from '../common/MarkdownRenderer.vue'
+
 defineProps({
   items: {
     type: Array,
@@ -11,6 +13,10 @@ defineProps({
   clearing: {
     type: Boolean,
     required: true,
+  },
+  deletingId: {
+    type: Number,
+    default: null,
   },
   loading: {
     type: Boolean,
@@ -34,6 +40,7 @@ defineEmits([
   'close',
   'reuse-question',
   'clear',
+  'delete-history',
   'search',
   'update:search-keyword',
   'update:selected-mode',
@@ -94,10 +101,21 @@ defineEmits([
             <div class="history-card">
               <div class="history-meta">
                 <span class="history-tag">{{ item.modeLabel }}</span>
-                <time>{{ new Date(item.createdAt).toLocaleString('zh-CN', { hour12: false }) }}</time>
+                <div class="history-card-actions">
+                  <time>{{ new Date(item.createdAt).toLocaleString('zh-CN', { hour12: false }) }}</time>
+                  <button
+                    class="icon-btn danger-icon-btn history-delete-btn"
+                    type="button"
+                    title="删除该会话"
+                    :disabled="deletingId === item.id"
+                    @click="$emit('delete-history', item.id)"
+                  >
+                    {{ deletingId === item.id ? '…' : '×' }}
+                  </button>
+                </div>
               </div>
               <h3>{{ item.question }}</h3>
-              <p>{{ item.reply }}</p>
+              <MarkdownRenderer :content="item.reply" />
               <button class="link-btn history-reuse" type="button" @click="$emit('reuse-question', item.question)">
                 重新提问
               </button>

@@ -1,4 +1,12 @@
 <script setup>
+import MarkdownRenderer from '../common/MarkdownRenderer.vue'
+
+const modeShortLabels = {
+  debug: '调试',
+  learning: '学习',
+  interview: '面试',
+}
+
 defineProps({
   modes: {
     type: Array,
@@ -50,29 +58,45 @@ defineEmits(['update:question', 'update:autoExtractEnabled', 'submit', 'select-m
 </script>
 
 <template>
-  <section class="panel qa-panel">
-    <div class="section-heading">
-      <div class="qa-toolbar">
-        <div>
-          <h2>{{ currentMode.label }}</h2>
-          <p class="tone-text" v-if="currentMode.tone">输出风格：{{ currentMode.tone }}</p>
-        </div>
-
-        <div class="mode-segmented">
-          <button
-            v-for="mode in modes"
-            :key="mode.key"
-            type="button"
-            class="mode-segment-item"
-            :class="{ active: activeMode === mode.key }"
-            @click="$emit('select-mode', mode.key)"
-          >
-            <span class="mode-label">{{ mode.label.replace('模式', '') }}</span>
-          </button>
-        </div>
+  <section class="qa-panel">
+    <div class="qa-topbar">
+      <div>
+        <h2>{{ currentMode.label }}</h2>
+        <p class="tone-text" v-if="currentMode.tone">{{ currentMode.tone }}</p>
       </div>
 
-      <div class="qa-subtoolbar">
+      <div class="mode-segmented" aria-label="答疑模式">
+        <button
+          v-for="mode in modes"
+          :key="mode.key"
+          type="button"
+          class="mode-segment-item"
+          :class="{ active: activeMode === mode.key }"
+          @click="$emit('select-mode', mode.key)"
+        >
+          {{ modeShortLabels[mode.key] || mode.label.replace('模式', '') }}
+        </button>
+      </div>
+    </div>
+
+    <div class="answer-box">
+      <h3>助手输出</h3>
+      <MarkdownRenderer :content="answer" fallback="这里会显示回答内容。" />
+    </div>
+
+    <div class="composer">
+      <label class="field">
+        你的问题
+        <textarea
+          :value="question"
+          rows="4"
+          :placeholder="currentMode.placeholder"
+          :disabled="modeLoading"
+          @input="$emit('update:question', $event.target.value)"
+        />
+      </label>
+
+      <div class="composer-footer">
         <label class="inline-toggle">
           <input
             type="checkbox"
@@ -81,6 +105,7 @@ defineEmits(['update:question', 'update:autoExtractEnabled', 'submit', 'select-m
           />
           <span>自动沉淀薄弱点</span>
         </label>
+
         <p
           v-if="extractionMessage"
           class="inline-tip"
@@ -92,32 +117,13 @@ defineEmits(['update:question', 'update:autoExtractEnabled', 'submit', 'select-m
         >
           {{ extractionMessage }}
         </p>
+
+        <button class="primary-btn" type="button" :disabled="loading || modeLoading" @click="$emit('submit')">
+          {{ loading ? '生成中...' : '生成回答' }}
+        </button>
       </div>
     </div>
 
-    <label class="field">
-      你的问题
-      <textarea
-        :value="question"
-        rows="6"
-        :placeholder="currentMode.placeholder"
-        :disabled="modeLoading"
-        @input="$emit('update:question', $event.target.value)"
-      />
-    </label>
-
-    <div class="action-row">
-      <button class="primary-btn" type="button" :disabled="loading || modeLoading" @click="$emit('submit')">
-        {{ loading ? '生成中...' : '生成回答' }}
-      </button>
-      <span class="status-text" v-if="modeLoading">正在加载模式配置...</span>
-    </div>
-
     <p class="error-text" v-if="errorMessage">{{ errorMessage }}</p>
-
-    <div class="answer-box">
-      <h3>助手输出</h3>
-      <pre>{{ answer || '这里会显示回答内容。' }}</pre>
-    </div>
   </section>
 </template>

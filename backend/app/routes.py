@@ -2,7 +2,7 @@ import json
 
 from flask import Blueprint, Response, jsonify, request, stream_with_context
 
-from .services.history_service import add_history_entry, clear_history, list_history
+from .services.history_service import add_history_entry, clear_history, delete_history_entry, list_history
 from .services.llm_service import generate_reply, stream_reply
 from .services.mistake_service import (
     create_mistake_record,
@@ -11,6 +11,7 @@ from .services.mistake_service import (
     list_mistakes,
     move_mistake_record,
     reorder_mistake_records,
+    update_mistake_record,
 )
 from .services.mode_service import build_fallback_reply, get_mode_by_key, list_modes
 from .services.prompt_service import build_prompts
@@ -56,6 +57,16 @@ def create_history():
 @api_bp.route("/history", methods=["DELETE"])
 def remove_history():
     clear_history()
+    return jsonify({"ok": True, "data": []})
+
+
+@api_bp.route("/history/<int:record_id>", methods=["DELETE"])
+def remove_history_entry(record_id: int):
+    try:
+        delete_history_entry(record_id)
+    except ValueError as error:
+        return jsonify({"ok": False, "message": str(error)}), 404
+
     return jsonify({"ok": True, "data": []})
 
 
@@ -124,12 +135,14 @@ def create_mistakes_from_chat():
     try:
         records = create_mistakes_from_assistant(question=question, reply=reply)
     except Exception as error:
+        detail = str(error)
+        print("[mistake-extraction] failed", {"question": question, "detail": detail})
         return (
             jsonify(
                 {
                     "ok": False,
                     "message": "从答疑结果提炼知识点失败",
-                    "detail": str(error),
+                    "detail": detail,
                 }
             ),
             502,
@@ -146,6 +159,18 @@ def remove_mistake(record_id: int):
         return jsonify({"ok": False, "message": str(error)}), 404
 
     return jsonify({"ok": True, "data": []})
+
+
+@api_bp.route("/mistakes/<int:record_id>", methods=["PUT"])
+def update_mistake(record_id: int):
+    body = request.get_json(silent=True) or {}
+
+    try:
+        record = update_mistake_record(record_id=record_id, entry=body)
+    except ValueError as error:
+        return jsonify({"ok": False, "message": str(error)}), 400
+
+    return jsonify({"ok": True, "data": record})
 
 
 @api_bp.route("/mistakes/<int:record_id>/move", methods=["POST"])

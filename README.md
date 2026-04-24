@@ -1,15 +1,17 @@
 # 基于大模型的编程答疑助手
 
-一个面向教学场景的编程答疑项目，当前提供三种问答模式：
+一个面向编程学习场景的教学型答疑系统。项目支持多模式问答、流式输出、会话历史、学习资料展示和薄弱点知识卡片管理，后端已切换为 `Flask + LangChain`，后续可继续扩展 `RAG` 和 `Agent` 能力。
 
-- `调试模式`：先补齐上下文，再给排查步骤
-- `学习模式`：强调概念解释、原理拆解和简短示例
-- `面试模式`：优先给思路、关键词和答题框架
+## 功能概览
 
-项目采用前后端分离结构：
-
-- 前端：`Vue 3 + Vite`
-- 后端：`Flask + LangChain`
+- 智能答疑：支持调试模式、学习模式、面试模式。
+- 流式输出：模型回答会逐步显示，降低等待感。
+- Markdown 渲染：助手回答和历史记录支持标题、列表、代码块、表格等格式。
+- 会话历史：支持查询、清空、删除单条历史、复用历史问题。
+- 自动沉淀薄弱点：答疑结束后可自动提取用户可能不熟悉的知识点。
+- 薄弱点管理：支持新增、编辑、删除、拖拽排序。
+- 学习中心：以卡片形式展示 C、Java、Go、Rust、Vue 3 等方向的学习资料。
+- 登录注册页面：目前是前端页面原型，可后续接入真实用户体系。
 
 ## 技术栈
 
@@ -18,136 +20,126 @@
 - `Vue 3`
 - `Vue Router`
 - `Vite`
-- 原生 `fetch`
-- `SSE` 流式展示问答结果
+- `fetch`
+- `SSE` 流式接收模型输出
+- `marked`：Markdown 解析
+- `DOMPurify`：Markdown HTML 清洗
 
 ### 后端
 
-- `Python 3.12+`
+- `Python`
 - `Flask`
+- `Flask-SQLAlchemy`
+- `SQLite`
 - `LangChain`
 - `langchain-openai`
 - OpenAI-compatible 模型接口
 
-### 当前模型接入方式
+### 当前数据库
 
-后端通过 `LangChain` 的 `ChatOpenAI` 接入兼容 OpenAI 协议的模型平台，例如：
+当前使用本地 SQLite：
 
-- 阿里云百炼
-- 硅基流动
-- 火山方舟
-- 其他 OpenAI-compatible 平台
+```text
+backend/data/programming_assistant.db
+```
 
-## 当前项目结构
+目前已持久化：
+
+- 会话历史
+- 薄弱点知识卡片
+
+## 项目结构
 
 ```text
 .
 ├─ backend
 │  ├─ app
 │  │  ├─ services
-│  │  │  ├─ history_service.py
-│  │  │  ├─ llm_service.py
-│  │  │  ├─ mode_service.py
-│  │  │  └─ prompt_service.py
-│  │  ├─ __init__.py
-│  │  ├─ config.py
-│  │  └─ routes.py
+│  │  │  ├─ history_service.py      # 会话历史服务
+│  │  │  ├─ llm_service.py          # LangChain 模型调用
+│  │  │  ├─ mistake_service.py      # 薄弱点卡片服务
+│  │  │  ├─ mode_service.py         # 答疑模式与兜底回复
+│  │  │  └─ prompt_service.py       # 答疑提示词
+│  │  ├─ __init__.py                # Flask 应用工厂
+│  │  ├─ config.py                  # 配置项
+│  │  ├─ extensions.py              # Flask 扩展
+│  │  ├─ models.py                  # SQLAlchemy 模型
+│  │  └─ routes.py                  # API 路由
+│  ├─ data                          # SQLite 数据文件目录
 │  ├─ requirements.txt
 │  ├─ package.json
 │  └─ server.py
 ├─ frontend
 │  ├─ src
 │  │  ├─ components
-│  │  ├─ router
-│  │  ├─ services
-│  │  ├─ views
+│  │  │  ├─ assistant               # 答疑相关组件
+│  │  │  ├─ auth                    # 登录注册组件
+│  │  │  ├─ common                  # 通用组件
+│  │  │  └─ layout                  # 页面布局组件
+│  │  ├─ data                       # 学习资料数据
+│  │  ├─ router                     # 前端路由
+│  │  ├─ services                   # API 请求封装
+│  │  ├─ views                      # 页面
 │  │  ├─ App.vue
 │  │  ├─ main.js
 │  │  └─ style.css
-│  ├─ vite.config.js
-│  └─ package.json
-├─ package.json
+│  ├─ package.json
+│  └─ vite.config.js
+├─ package.json                     # 根目录脚本
 └─ README.md
 ```
 
-## 目录职责
+说明：
 
-### `frontend/src/views`
-
-页面容器层，负责页面状态和页面编排。
-
-### `frontend/src/components`
-
-展示组件层，负责页面模块和交互表现。
-
-### `frontend/src/services`
-
-前端接口访问层，统一封装 `/api` 请求。
-
-### `backend/app/routes.py`
-
-后端接口入口，定义 Flask 路由。
-
-### `backend/app/services`
-
-后端业务层：
-
-- `mode_service.py`：模式配置和兜底回复
-- `prompt_service.py`：提示词构造
-- `llm_service.py`：LangChain 模型调用
-- `history_service.py`：会话历史
-
-## 已实现功能
-
-- 登录 / 注册页面原型
-- 智能答疑页面
-- `调试 / 学习 / 面试` 三种模式切换
-- 流式问答输出
-- 会话历史记录
-- 学习中心页面
-- 错题本页面
-- 学习资料详情页
+- 根目录下旧的 `src`、`dist` 目录不是当前主要开发入口。
+- 当前前端入口在 `frontend/src`。
+- 当前后端入口在 `backend/server.py`。
 
 ## 环境要求
 
 ### Node.js
 
-建议：
+建议使用：
 
-- `Node.js >= 20.19.0`
+```text
+Node.js >= 20.19.0
+```
 
-当前前端使用 `Vite`，如果版本过低，构建时可能会出现兼容性提示。
+如果 Node 版本较低，Vite 构建时可能会提示版本警告。
 
 ### Python
 
-建议：
+建议使用：
 
-- `Python >= 3.10`
+```text
+Python >= 3.10
+```
 
-当前已在 `Python 3.12` 环境下验证。
+项目当前在 Python 3.12 环境下验证过。
 
 ## 安装依赖
 
-### 前端依赖
-
-在项目根目录执行：
+在项目根目录安装前端依赖：
 
 ```bash
 npm install
-npm --prefix frontend install
 ```
 
-### 后端依赖
-
-如果本机还没有安装 Python 依赖，执行：
+安装后端 Python 依赖：
 
 ```bash
 python -m pip install -r backend/requirements.txt
 ```
 
-## 模型环境变量配置
+如果只想单独安装前端依赖，也可以执行：
 
-启动后端前，需要在当前终端中配置模型环境变量。
+```bash
+npm --prefix frontend install
+```
+
+## 模型配置
+
+后端通过 `LangChain` 的 `ChatOpenAI` 接入 OpenAI-compatible 模型服务。
 
 PowerShell 示例：
 
@@ -157,18 +149,20 @@ $env:LLM_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
 $env:LLM_MODEL="qvq-max-2025-03-25"
 ```
 
-可选参数：
+可选配置：
 
 ```powershell
 $env:LLM_TEMPERATURE="0.7"
 $env:LLM_MAX_TOKENS="1200"
+$env:DATABASE_URL="sqlite:///backend/data/programming_assistant.db"
 ```
 
 说明：
 
-- 后端同时支持 `LLM_API_KEY` 和 `DASHSCOPE_API_KEY`
-- `LLM_BASE_URL` 需要填写兼容 OpenAI 协议的基础地址
-- 后端模型调用现在由 `Flask + LangChain` 承载
+- `LLM_API_KEY` 和 `DASHSCOPE_API_KEY` 二选一即可。
+- `LLM_BASE_URL` 需要填写兼容 OpenAI 协议的接口地址。
+- `LLM_MODEL` 需要填写当前账号可用的模型名称。
+- 如果没有配置模型 Key，后端模型调用会失败。
 
 ## 启动项目
 
@@ -180,10 +174,16 @@ $env:LLM_MAX_TOKENS="1200"
 npm run dev:backend
 ```
 
-默认地址：
+后端默认地址：
 
 ```text
 http://localhost:3000
+```
+
+健康检查：
+
+```text
+http://localhost:3000/api/health
 ```
 
 ### 2. 启动前端
@@ -194,228 +194,286 @@ http://localhost:3000
 npm run dev:frontend
 ```
 
-默认地址：
+前端默认地址：
 
 ```text
 http://localhost:5173
 ```
 
-### 3. 打开页面
+### 3. 访问页面
 
-浏览器访问：
+浏览器打开：
 
 ```text
 http://localhost:5173
 ```
 
-前端代理配置在 `frontend/vite.config.js`：
+前端开发环境会通过 Vite 代理访问后端接口。代理配置位于：
 
-```js
-proxy: {
-  '/api': 'http://localhost:3000',
-}
+```text
+frontend/vite.config.js
 ```
-
-这意味着前端访问 `/api/...` 时，会自动转发到 Flask 后端。
 
 ## 常用命令
 
 ```bash
-npm run dev:backend
-npm run dev:frontend
-npm run build
-npm run build:frontend
-npm run start:backend
+npm run dev:backend       # 启动 Flask 后端
+npm run dev:frontend      # 启动 Vue 前端
+npm run build             # 构建前端
+npm run build:frontend    # 构建前端
+npm run start:backend     # 启动后端
 ```
 
-## 主要接口
+后端语法检查：
 
-### `GET /api/health`
+```bash
+python -m compileall backend/app
+```
 
-健康检查接口。
+## 页面说明
 
-### `GET /api/modes`
+### 首页
 
-获取三种问答模式配置。
+首页主要提供学习流程入口：
 
-### `POST /api/assistant/reply`
+- 智能答疑
+- 薄弱点记录
+- 学习中心
 
-普通问答接口，返回完整回复。
+### 智能答疑
+
+核心问答页面，包含：
+
+- 三种模式切换
+- 问题输入
+- 流式回答
+- 自动沉淀薄弱点开关
+- 会话历史弹窗
+
+三种模式：
+
+- 调试模式：信息不足时优先追问，信息足够时给排查路径。
+- 学习模式：用简短结构解释概念，并给最小示例。
+- 面试模式：给提示、关键词和答题顺序，默认不直接给完整代码。
+
+### 薄弱点
+
+用于管理学习过程中沉淀的知识卡片：
+
+- 自动生成
+- 手动新增
+- 编辑修改
+- 删除
+- 拖拽排序
+
+### 学习中心
+
+以卡片形式展示学习资料入口，目前包含：
+
+- C 语言
+- Java
+- Go
+- Rust
+- Vue 3
+
+## 主要 API
+
+### 基础接口
+
+```text
+GET /api/health
+GET /api/modes
+```
+
+### 答疑接口
+
+```text
+POST /api/assistant/reply
+POST /api/assistant/reply-stream
+```
+
+前端当前主要使用流式接口：
+
+```text
+POST /api/assistant/reply-stream
+```
 
 请求示例：
 
 ```json
 {
   "mode": "learning",
-  "question": "帮我解释一下 Vue 3 的 ref 和 reactive 区别"
+  "question": "C语言中结构体怎么定义？"
 }
 ```
 
-### `POST /api/assistant/reply-stream`
+### 会话历史接口
 
-流式问答接口，前端当前优先使用这条接口。
+```text
+GET /api/history
+POST /api/history
+DELETE /api/history
+DELETE /api/history/<id>
+```
 
-### `GET /api/history`
+支持：
 
-获取当前运行期内的会话历史。
+- 获取历史
+- 新增历史
+- 清空历史
+- 删除单条历史
 
-### `POST /api/history`
+### 薄弱点接口
 
-新增一条会话历史记录。
+```text
+GET /api/mistakes
+POST /api/mistakes
+PUT /api/mistakes/<id>
+DELETE /api/mistakes/<id>
+POST /api/mistakes/from-assistant
+POST /api/mistakes/<id>/move
+POST /api/mistakes/reorder
+```
 
-### `DELETE /api/history`
+支持：
 
-清空当前运行期内的会话历史。
+- 获取薄弱点
+- 手动新增
+- 编辑卡片
+- 删除卡片
+- 从答疑结果自动沉淀
+- 排序调整
 
-## 后端后续技术路线建议
+## 自动沉淀薄弱点说明
 
-你现在计划的方向是：
+答疑完成后，如果开启“自动沉淀薄弱点”，前端会调用：
 
-- `Flask + LangChain + RAG`
+```text
+POST /api/mistakes/from-assistant
+```
 
-这个方向是合理的，适合作为毕设主线。建议你把后端继续拆成下面几层：
+后端会让模型从本轮问答中提取知识点，并保存为薄弱点卡片。
 
-### 1. Web 层
+如果模型返回格式不稳定，系统会进行兜底处理：
 
-使用 `Flask` 负责：
+- 判断问题是否明显属于编程学习问题。
+- 如果是，则生成一张简短知识卡片。
+- 如果只是寒暄或无明确学习内容，则不生成。
 
-- 路由
-- 请求参数校验
-- 响应格式
-- SSE 流式输出
-- 用户会话
+## 当前提示词策略
 
-### 2. Chain 层
+为了避免模型回答过长，当前答疑提示词默认要求：
 
-使用 `LangChain` 负责：
+- 不写成长篇教程。
+- 默认控制在约 120 字以内。
+- 列表最多 3 条。
+- 代码最多 8 行。
+- 用户未明确要求详细解释时，不主动展开完整知识体系。
 
-- PromptTemplate
-- ChatModel
-- Retriever
-- RAG chain
-- 输出约束
+如果需要更详细回答，可以在问题中明确写：
 
-### 3. Knowledge 层
+```text
+请详细解释
+请给完整代码
+请展开讲
+```
 
-单独维护知识库相关能力：
+## 后续扩展建议
 
-- 文档加载
-- 文本切分
-- 向量化
-- 向量检索
-- 引用片段返回
+### RAG
 
-### 4. Persistence 层
+后续可以将学习中心资料、课程文档、Markdown 笔记等接入 RAG：
 
-单独维护持久化能力：
+```text
+用户问题
+→ 检索相关资料
+→ 拼接上下文
+→ 模型回答
+→ 返回引用来源
+```
 
-- 用户表
-- 会话历史
-- 学习记录
-- 错题记录
-- 资料索引
+建议新增模块：
 
-## 对后端的具体建议
+```text
+backend/app/services/embedding_service.py
+backend/app/services/retriever_service.py
+backend/app/services/rag_service.py
+```
 
-如果你后续确定主打 `Flask + LangChain + RAG`，我建议再补这几个点：
-
-### 1. 增加 `SQLAlchemy`
-
-原因：
-
-- 现在历史记录还是内存级
-- 后面做用户、会话、错题本都需要数据库
-
-推荐：
-
-- `Flask + SQLAlchemy`
-- 数据库先用 `SQLite`
-- 后续再切 `MySQL` 或 `PostgreSQL`
-
-### 2. 增加向量库或本地向量存储
-
-RAG 必须要有检索层。
-
-第一阶段推荐：
+可选向量库：
 
 - `FAISS`
-- 或 `Chroma`
+- `Chroma`
 
-原因：
+### Agent
 
-- 本地开发简单
-- 适合毕设演示
-- 和 LangChain 集成成熟
+后续可以把系统升级为编程学习 Agent，让模型根据问题自动选择工具：
 
-### 3. 增加 Embedding 层
+- 查询历史会话
+- 查询薄弱点
+- 检索知识库
+- 新增薄弱点
+- 生成答疑回答
 
-RAG 不只是“把资料喂给模型”，还要有向量化。
+推荐先完成 RAG，再引入 Agent，整体会更稳。
 
-建议单独抽出：
+### 用户体系
 
-- `embedding_service.py`
-- `retriever_service.py`
-- `rag_service.py`
+登录注册页面目前是前端原型，后续可以补充：
 
-### 4. 增加文档预处理
+- 用户注册
+- 用户登录
+- 密码加密
+- Token 鉴权
+- 按用户隔离历史记录和薄弱点
 
-后面知识库如果来自：
+## 常见问题
 
-- Markdown
-- PDF
-- 网页资料
-- 课程讲义
+### 1. 前端提示接口失败
 
-建议单独做：
+先确认后端是否启动：
 
-- 文档清洗
-- 文本切分
-- 元数据标记
+```text
+http://localhost:3000/api/health
+```
 
-否则后面 RAG 质量会不稳定。
+再确认前端是否通过 Vite 代理访问 `/api`。
 
-### 5. 增加统一配置管理
+### 2. 模型接口调用失败
 
-现在已有 `config.py`，后面建议继续扩：
+检查环境变量：
 
-- 模型配置
-- 数据库配置
-- 向量库配置
-- 检索参数配置
+```powershell
+echo $env:DASHSCOPE_API_KEY
+echo $env:LLM_BASE_URL
+echo $env:LLM_MODEL
+```
 
-这样方便答辩时讲“系统具备可配置能力”。
+同时确认当前 API Key 是否支持所选模型和调用方式。
 
-### 6. 增加日志和异常处理
+### 3. 前端构建出现 Node 版本警告
 
-建议后面统一加入：
+如果看到类似提示：
 
-- 请求日志
-- 模型调用日志
-- 检索日志
-- 错误日志
+```text
+Vite requires Node.js version 20.19+ or 22.12+
+```
 
-因为你做的是教学型系统，后面排查模型回复问题和 RAG 命中问题时会很有用。
+建议升级 Node.js 到 `20.19+` 或 `22.12+`。
 
-## 推荐的后端演进顺序
+### 4. 自动沉淀薄弱点没有出现
 
-建议按这个顺序推进：
+检查：
 
-1. 先把 `Flask + LangChain` 当前链路跑稳
-2. 给历史记录接数据库
-3. 引入 `FAISS` 或 `Chroma`
-4. 接 Embedding
-5. 做第一版 RAG
-6. 给回答结果增加引用来源
-7. 再补用户体系、学习记录和错题本持久化
+- 答疑页“自动沉淀薄弱点”开关是否开启。
+- 后端服务是否已重启。
+- 问题是否是明确的编程学习问题。
+- 后端控制台是否有 `[mistake-extraction]` 日志。
 
-## 当前最值得增加的后端技术点
+### 5. 修改代码后页面没变化
 
-如果你问“除了 `Flask + LangChain + RAG`，还建议什么”，我给你的答案是：
+前端改动通常会热更新；后端改动需要重启：
 
-1. `SQLAlchemy`
-2. `FAISS` 或 `Chroma`
-3. `Embedding Service`
-4. 日志系统
-5. 配置管理
-
-这五个点比一开始就上复杂 Agent 更实用，也更适合毕设叙述。
+```bash
+npm run dev:backend
+```

@@ -4,31 +4,31 @@ import { learningTopics } from '../data/learningResources'
 
 <template>
   <section class="page-stack">
-    <header class="page-hero">
+    <header class="page-hero compact-hero">
       <div>
-        <div class="badge">Learning Center</div>
+        <div class="badge">Learning</div>
         <h2>学习中心</h2>
-        <p class="panel-desc">按语言和框架查看学习主题，进入后可直接访问对应资料。</p>
+        <p class="panel-desc">选择一个方向，进入对应资料页。</p>
       </div>
     </header>
 
-    <section class="panel">
-      <div class="section-heading">
-        <h3>学习主题</h3>
-        <p class="panel-desc">选择一个主题开始学习。</p>
-      </div>
-      <div class="resource-grid topic-grid">
-        <RouterLink
-          v-for="item in learningTopics"
-          :key="item.slug"
-          :to="`/learning/${item.slug}`"
-          class="resource-card topic-card interactive-card"
-        >
-          <span class="row-tag">{{ item.level }}</span>
-          <strong>{{ item.title }}</strong>
+    <section class="topic-grid">
+      <RouterLink
+        v-for="item in learningTopics"
+        :key="item.slug"
+        :to="`/learning/${item.slug}`"
+        class="topic-card interactive-card"
+      >
+        <div class="topic-initial">{{ item.initial }}</div>
+        <div class="topic-content">
+          <div class="topic-card-head">
+            <strong>{{ item.title }}</strong>
+            <span class="row-tag">{{ item.level }}</span>
+          </div>
           <p>{{ item.desc }}</p>
-        </RouterLink>
-      </div>
+          <span class="topic-action">查看资料 →</span>
+        </div>
+      </RouterLink>
     </section>
   </section>
 </template>

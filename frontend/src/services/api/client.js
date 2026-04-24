@@ -14,16 +14,16 @@ async function request(url, options = {}) {
     try {
       data = JSON.parse(rawText)
     } catch {
-      throw new Error(`????????? JSON???? ${response.status}`)
+      throw new Error(`接口返回的不是合法 JSON，状态码 ${response.status}`)
     }
   }
 
   if (!data) {
-    throw new Error(`??????????? ${response.status}`)
+    throw new Error(`接口返回空响应，状态码 ${response.status}`)
   }
 
   if (!response.ok || !data.ok) {
-    const error = new Error(data.message || `???????? ${response.status}`)
+    const error = new Error(data.message || `请求失败，状态码 ${response.status}`)
     error.detail = data.detail || ''
     error.status = response.status
     throw error
@@ -50,6 +50,12 @@ export const apiClient = {
   post(url, body) {
     return request(url, {
       method: 'POST',
+      body: JSON.stringify(body),
+    })
+  },
+  put(url, body) {
+    return request(url, {
+      method: 'PUT',
       body: JSON.stringify(body),
     })
   },

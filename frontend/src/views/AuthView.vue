@@ -10,12 +10,12 @@ const router = useRouter()
 const isLogin = computed(() => route.params.mode === 'login')
 const title = computed(() => (isLogin.value ? '欢迎回来' : '创建账号'))
 const subtitle = computed(() =>
-  isLogin.value ? '登录后继续使用编程答疑助手' : '注册后可体验多种答疑模式'
+  isLogin.value ? '继续你的编程学习和答疑记录。' : '开启学习、答疑和薄弱点沉淀。'
 )
 
 function handleSubmit(form) {
   if (!isLogin.value && form.password !== form.confirmPassword) {
-    window.alert('两次密码不一致，请检查后重试。')
+    window.alert('两次密码不一致，请重新输入。')
     return
   }
 

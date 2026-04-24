@@ -45,3 +45,13 @@ def add_history_entry(entry: dict) -> dict:
 def clear_history() -> None:
     ConversationHistory.query.delete()
     db.session.commit()
+
+
+def delete_history_entry(record_id: int) -> None:
+    record = db.session.get(ConversationHistory, record_id)
+
+    if not record:
+        raise ValueError("历史会话不存在")
+
+    db.session.delete(record)
+    db.session.commit()

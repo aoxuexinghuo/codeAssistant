@@ -18,7 +18,7 @@ def create_app() -> Flask:
         # 前端开发环境通过 Vite 代理访问这里，但直接请求后端时
         # 仍然需要补齐 CORS 头，避免浏览器拦截。
         response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "GET,POST,DELETE,OPTIONS"
+        response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = "Content-Type"
         return response
 

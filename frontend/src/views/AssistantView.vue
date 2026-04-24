@@ -8,6 +8,7 @@ import {
   clearHistory,
   createHistoryEntry,
   createMistakesFromAssistant,
+  deleteHistoryEntry,
   fetchHistory,
   fetchModes,
   streamReply,
@@ -23,6 +24,7 @@ const loading = ref(false)
 const modeLoading = ref(true)
 const historyLoading = ref(true)
 const clearingHistory = ref(false)
+const deletingHistoryId = ref(null)
 const historyVisible = ref(false)
 const historyKeyword = ref('')
 const historyModeFilter = ref('')
@@ -196,6 +198,20 @@ async function handleClearHistory() {
   }
 }
 
+async function handleDeleteHistory(id) {
+  deletingHistoryId.value = id
+  errorMessage.value = ''
+
+  try {
+    await deleteHistoryEntry(id)
+    historyItems.value = historyItems.value.filter((item) => item.id !== id)
+  } catch (error) {
+    errorMessage.value = error.message
+  } finally {
+    deletingHistoryId.value = null
+  }
+}
+
 function reuseQuestion(savedQuestion) {
   question.value = savedQuestion
   historyVisible.value = false
@@ -228,12 +244,14 @@ onMounted(() => {
       :items="historyItems"
       :visible="historyVisible"
       :clearing="clearingHistory"
+      :deleting-id="deletingHistoryId"
       :loading="historyLoading"
       :search-keyword="historyKeyword"
       :selected-mode="historyModeFilter"
       :mode-options="modeOptions"
       @reuse-question="reuseQuestion"
       @clear="handleClearHistory"
+      @delete-history="handleDeleteHistory"
       @search="loadHistory"
       @update:search-keyword="historyKeyword = $event"
       @update:selected-mode="historyModeFilter = $event"

@@ -76,6 +76,10 @@ export function clearHistory() {
   return apiClient.delete('/api/history')
 }
 
+export function deleteHistoryEntry(id) {
+  return apiClient.delete(`/api/history/${id}`)
+}
+
 export function fetchMistakes() {
   return apiClient.get('/api/mistakes')
 }
@@ -90,6 +94,10 @@ export function createMistakesFromAssistant(payload) {
 
 export function deleteMistakeEntry(id) {
   return apiClient.delete(`/api/mistakes/${id}`)
+}
+
+export function updateMistakeEntry(id, payload) {
+  return apiClient.put(`/api/mistakes/${id}`, payload)
 }
 
 export function moveMistakeEntry(id, direction) {

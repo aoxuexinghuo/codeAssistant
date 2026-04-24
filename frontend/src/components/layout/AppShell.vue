@@ -1,19 +1,18 @@
 <script setup>
 const navItems = [
-  { label: '首页', to: '/home' },
-  { label: '学习中心', to: '/learning' },
-  { label: '错题本', to: '/mistakes' },
-  { label: '智能答疑', to: '/assistant' },
+  { label: '首页', short: '首', to: '/home' },
+  { label: '学习中心', short: '学', to: '/learning' },
+  { label: '薄弱点', short: '错', to: '/mistakes' },
+  { label: '智能答疑', short: '答', to: '/assistant' },
 ]
 </script>
 
 <template>
   <div class="app-shell">
     <aside class="shell-sidebar">
-      <div class="shell-brand">
-        <div class="badge">Assistant</div>
-        <h1>编程学习助手</h1>
-      </div>
+      <RouterLink to="/home" class="shell-brand" title="编程学习助手">
+        <span>PA</span>
+      </RouterLink>
 
       <nav class="shell-nav">
         <RouterLink
@@ -22,7 +21,9 @@ const navItems = [
           :to="item.to"
           class="shell-nav-item"
           active-class="active"
+          :title="item.label"
         >
+          <span class="nav-mark">{{ item.short }}</span>
           <strong>{{ item.label }}</strong>
         </RouterLink>
       </nav>

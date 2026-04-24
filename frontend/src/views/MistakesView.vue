@@ -5,6 +5,7 @@ import {
   deleteMistakeEntry,
   fetchMistakes,
   reorderMistakeEntries,
+  updateMistakeEntry,
 } from '../services/api/assistant'
 
 const mistakes = ref([])
@@ -13,7 +14,10 @@ const deletingId = ref(null)
 const reordering = ref(false)
 const draggingId = ref(null)
 const createVisible = ref(false)
+const editVisible = ref(false)
+const editingId = ref(null)
 const submitting = ref(false)
+const updating = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 let successTimer = null
@@ -24,13 +28,21 @@ const form = reactive({
   note: '',
 })
 
+const editForm = reactive({
+  topic: '',
+  question: '',
+  referenceAnswer: '',
+  userAnswer: '',
+  mistakeType: 'concept',
+})
+
 const typeLabels = {
-  concept: '概念不清',
-  logic: '逻辑错误',
-  boundary: '边界遗漏',
-  syntax: '语法 / API',
-  expression: '表达不足',
-  debugging: '排查思路',
+  concept: '概念',
+  logic: '逻辑',
+  boundary: '边界',
+  syntax: '语法',
+  expression: '表达',
+  debugging: '排查',
 }
 
 const totalCount = computed(() => mistakes.value.length)
@@ -92,7 +104,7 @@ async function handleCreate() {
     createVisible.value = false
     form.question = ''
     form.note = ''
-    showSuccess('已添加一条知识点卡片')
+    showSuccess('已添加知识卡片')
   } catch (error) {
     errorMessage.value = error.message
   } finally {
@@ -107,11 +119,55 @@ async function handleDelete(id) {
   try {
     await deleteMistakeEntry(id)
     mistakes.value = mistakes.value.filter((item) => item.id !== id)
-    showSuccess('已删除该记录')
+    showSuccess('已删除记录')
   } catch (error) {
     errorMessage.value = error.message
   } finally {
     deletingId.value = null
+  }
+}
+
+function openEditModal(item) {
+  editingId.value = item.id
+  editForm.topic = item.topic || ''
+  editForm.question = item.question || ''
+  editForm.referenceAnswer = item.referenceAnswer || ''
+  editForm.userAnswer = buildCardNote(item)
+  editForm.mistakeType = item.mistakeType || 'concept'
+  editVisible.value = true
+  errorMessage.value = ''
+}
+
+function closeEditModal() {
+  editVisible.value = false
+  editingId.value = null
+  errorMessage.value = ''
+}
+
+async function handleUpdate() {
+  if (!editingId.value) {
+    return
+  }
+
+  updating.value = true
+  errorMessage.value = ''
+
+  try {
+    const record = await updateMistakeEntry(editingId.value, {
+      topic: editForm.topic.trim(),
+      question: editForm.question.trim(),
+      referenceAnswer: editForm.referenceAnswer.trim(),
+      userAnswer: editForm.userAnswer.trim(),
+      mistakeType: editForm.mistakeType,
+    })
+
+    mistakes.value = mistakes.value.map((item) => (item.id === record.id ? record : item))
+    closeEditModal()
+    showSuccess('已更新知识卡片')
+  } catch (error) {
+    errorMessage.value = error.message
+  } finally {
+    updating.value = false
   }
 }
 
@@ -176,27 +232,26 @@ onMounted(() => {
 
 <template>
   <section class="page-stack">
-    <header class="page-hero">
+    <header class="page-hero compact-hero">
       <div>
-        <div class="badge">Mistake Book</div>
-        <h2>知识薄弱点记录</h2>
-        <p class="panel-desc">系统会在答疑过程中自动沉淀薄弱点，你也可以手动补充重点记录。</p>
+        <div class="badge">Review</div>
+        <h2>薄弱点</h2>
+        <p class="panel-desc">自动沉淀和手动补充的知识卡片。</p>
       </div>
-      <button class="primary-link action-link" type="button" @click="createVisible = true">手动补充记录</button>
+      <button class="primary-link action-link" type="button" @click="createVisible = true">新增</button>
     </header>
 
     <p v-if="successMessage" class="success-toast" aria-live="polite">{{ successMessage }}</p>
 
     <section class="panel">
       <div class="section-heading">
-        <h3>薄弱点列表</h3>
-        <p class="panel-desc">当前共 {{ totalCount }} 条，拖动左侧手柄即可排序，右侧图标可直接删除。</p>
+        <h3>{{ totalCount }} 条记录</h3>
       </div>
 
       <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
 
       <div v-if="loading" class="history-empty">
-        <p>正在加载知识薄弱点...</p>
+        <p>正在加载...</p>
       </div>
 
       <div v-else-if="mistakes.length" class="card-list">
@@ -227,6 +282,9 @@ onMounted(() => {
               </div>
             </div>
             <div class="mistake-actions">
+              <button class="icon-btn" type="button" title="编辑记录" @click="openEditModal(item)">
+                ✎
+              </button>
               <button
                 class="icon-btn danger-icon-btn"
                 type="button"
@@ -234,7 +292,7 @@ onMounted(() => {
                 :disabled="deletingId === item.id"
                 @click="handleDelete(item.id)"
               >
-                {{ deletingId === item.id ? '…' : '✕' }}
+                {{ deletingId === item.id ? '…' : '×' }}
               </button>
             </div>
           </div>
@@ -248,7 +306,7 @@ onMounted(() => {
       </div>
 
       <div v-else class="history-empty">
-        <p>还没有记录。你可以先去答疑页面提问，或者手动补充一条重点知识薄弱点。</p>
+        <p>还没有记录。</p>
       </div>
     </section>
 
@@ -257,12 +315,10 @@ onMounted(() => {
         <section class="history-drawer create-mistake-modal">
           <div class="section-heading history-head">
             <div>
-              <h3>手动补充记录</h3>
-              <p class="panel-desc">现在只需要填写主题、标题和补充说明，系统会自动补全知识说明与建议。</p>
+              <h3>新增知识卡片</h3>
+              <p class="panel-desc">填写主题和标题，补充说明可选。</p>
             </div>
-            <div class="history-actions">
-              <button class="ghost-btn" type="button" @click="closeCreateModal">关闭</button>
-            </div>
+            <button class="ghost-btn" type="button" @click="closeCreateModal">关闭</button>
           </div>
 
           <form class="auth-form" @submit.prevent="handleCreate">
@@ -273,12 +329,12 @@ onMounted(() => {
 
             <label>
               <span>知识点标题</span>
-              <textarea v-model="form.question" placeholder="例如：reactive 解构后为什么会失去响应式"></textarea>
+              <textarea v-model="form.question" placeholder="例如：watch 和 watchEffect 怎么区分"></textarea>
             </label>
 
             <label>
               <span>补充说明</span>
-              <textarea v-model="form.note" placeholder="可选。写下你目前卡住的地方，或你想补充的背景。"></textarea>
+              <textarea v-model="form.note" placeholder="可选。写下当前卡住的地方。"></textarea>
             </label>
 
             <div class="action-row">
@@ -287,9 +343,70 @@ onMounted(() => {
                 type="submit"
                 :disabled="submitting || !form.topic.trim() || !form.question.trim()"
               >
-                {{ submitting ? '正在生成知识点卡片...' : '保存记录' }}
+                {{ submitting ? '生成中...' : '保存' }}
               </button>
               <button class="ghost-btn" type="button" @click="closeCreateModal">取消</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </transition>
+
+    <transition name="history-fade">
+      <div v-if="editVisible" class="history-overlay" @click.self="closeEditModal">
+        <section class="history-drawer create-mistake-modal">
+          <div class="section-heading history-head">
+            <div>
+              <h3>编辑知识卡片</h3>
+              <p class="panel-desc">修改卡片展示内容，不会重新调用模型。</p>
+            </div>
+            <button class="ghost-btn" type="button" @click="closeEditModal">关闭</button>
+          </div>
+
+          <form class="auth-form" @submit.prevent="handleUpdate">
+            <label>
+              <span>学习主题</span>
+              <input v-model="editForm.topic" type="text" placeholder="例如：Vue 3、Java、Go" />
+            </label>
+
+            <label>
+              <span>知识点标题</span>
+              <textarea v-model="editForm.question" placeholder="例如：watch 和 watchEffect 怎么区分"></textarea>
+            </label>
+
+            <label>
+              <span>卡片内容</span>
+              <textarea v-model="editForm.referenceAnswer" placeholder="写下这个知识点的核心说明"></textarea>
+            </label>
+
+            <label>
+              <span>个人备注</span>
+              <textarea v-model="editForm.userAnswer" placeholder="可选。写下你自己容易混淆的地方。"></textarea>
+            </label>
+
+            <label>
+              <span>类型</span>
+              <select v-model="editForm.mistakeType">
+                <option v-for="(label, value) in typeLabels" :key="value" :value="value">
+                  {{ label }}
+                </option>
+              </select>
+            </label>
+
+            <div class="action-row">
+              <button
+                class="primary-btn"
+                type="submit"
+                :disabled="
+                  updating ||
+                  !editForm.topic.trim() ||
+                  !editForm.question.trim() ||
+                  !editForm.referenceAnswer.trim()
+                "
+              >
+                {{ updating ? '保存中...' : '保存修改' }}
+              </button>
+              <button class="ghost-btn" type="button" @click="closeEditModal">取消</button>
             </div>
           </form>
         </section>

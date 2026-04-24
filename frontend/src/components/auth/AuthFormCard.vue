@@ -44,9 +44,11 @@ function handleSubmit() {
 
 <template>
   <section class="auth-card">
-    <div class="badge">{{ isLogin ? 'Login' : 'Register' }}</div>
-    <h2>{{ title }}</h2>
-    <p class="subtitle">{{ subtitle }}</p>
+    <div>
+      <div class="badge">{{ isLogin ? 'Login' : 'Register' }}</div>
+      <h2>{{ title }}</h2>
+      <p class="subtitle">{{ subtitle }}</p>
+    </div>
 
     <form class="auth-form" @submit.prevent="handleSubmit">
       <label>
@@ -69,7 +71,7 @@ function handleSubmit() {
         />
       </label>
 
-      <button type="submit">{{ isLogin ? '登录进入工作台' : '注册并进入工作台' }}</button>
+      <button type="submit">{{ isLogin ? '登录' : '注册' }}</button>
     </form>
 
     <p class="switch-text">

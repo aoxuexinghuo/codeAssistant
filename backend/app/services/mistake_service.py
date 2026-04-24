@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime, timezone
 
 from sqlalchemy import func
@@ -8,6 +9,46 @@ from ..models import MistakeRecord
 from .llm_service import generate_reply
 
 _ALLOWED_TYPES = {"concept", "logic", "boundary", "syntax", "expression", "debugging"}
+_TYPE_ALIASES = {
+    "概念": "concept",
+    "概念理解": "concept",
+    "逻辑": "logic",
+    "思路": "logic",
+    "边界": "boundary",
+    "边界条件": "boundary",
+    "语法": "syntax",
+    "表达": "expression",
+    "表述": "expression",
+    "调试": "debugging",
+    "排查": "debugging",
+}
+_PROGRAMMING_KEYWORDS = {
+    "c",
+    "java",
+    "go",
+    "rust",
+    "vue",
+    "python",
+    "sql",
+    "js",
+    "javascript",
+    "html",
+    "css",
+    "接口",
+    "函数",
+    "数组",
+    "指针",
+    "对象",
+    "线程",
+    "协程",
+    "响应式",
+    "组件",
+    "数据库",
+    "算法",
+    "报错",
+    "调试",
+    "编程",
+}
 _LEGACY_SAMPLE_QUESTIONS = {
     "reactive 解构后为什么会失去响应式",
     "接口返回后直接 map 为什么容易报错",
@@ -26,7 +67,8 @@ def _extract_json(text: str) -> dict:
 
 
 def _normalize_type(mistake_type: str) -> str:
-    value = mistake_type.strip()
+    value = mistake_type.strip().lower()
+    value = _TYPE_ALIASES.get(value, value)
 
     if value not in _ALLOWED_TYPES:
         raise ValueError("Model returned an invalid mistake type")
@@ -72,30 +114,108 @@ def _build_classification_prompts(question: str, user_answer: str, reference_ans
 
 def _build_gap_extraction_prompts(question: str, reply: str):
     system_prompt = (
-        "You are a teaching assistant that extracts potential knowledge gaps from a Q&A exchange. "
-        "Return JSON only in the form "
-        '{"items":[{"topic":"","question":"","summary":"","mistakeType":"","mistakeReason":"","improvementSuggestion":""}]}. '
-        "Return at most 2 items. "
-        "mistakeType must be one of concept, logic, boundary, syntax, expression, debugging. "
-        'If there is no obvious knowledge gap, return {"items":[]}. '
-        "Do not output markdown or extra explanation."
+        "你是一个编程教学助手，任务是从一次问答中提取用户可能还不清楚的知识点。"
+        "只返回 JSON，不要 Markdown，不要代码块，不要解释。"
+        "JSON 格式必须是："
+        '{"items":[{"topic":"","question":"","summary":"","mistakeType":"","mistakeReason":"","improvementSuggestion":""}]}。'
+        "最多返回 2 条。"
+        "mistakeType 只能使用英文值：concept、logic、boundary、syntax、expression、debugging。"
+        "如果只是寒暄、无明确编程知识点，返回 {\"items\":[]}。"
     )
     user_prompt = (
-        "Please extract potential knowledge gaps from this Q&A exchange.\n"
-        f"User question: {question}\n"
-        f"Assistant reply: {reply}\n"
+        "请从下面问答中提取薄弱知识点，并严格返回 JSON。\n"
+        f"用户问题：{question}\n"
+        f"助手回答：{reply}\n"
     )
     return system_prompt, user_prompt
 
 
-def _normalize_analysis(payload: dict) -> dict:
+def _infer_topic(question: str, reply: str) -> str:
+    text = f"{question} {reply}".lower()
+    topic_rules = [
+        ("Vue 3", ["vue", "watch", "ref", "reactive", "组件", "响应式"]),
+        ("Java", ["java", "jvm", "spring"]),
+        ("Go", ["go", "goroutine", "channel", "协程"]),
+        ("Rust", ["rust", "borrow", "ownership", "所有权"]),
+        ("C语言", ["c语言", "指针", "malloc", "printf"]),
+        ("Python", ["python", "flask", "django"]),
+        ("数据库", ["sql", "mysql", "sqlite", "数据库"]),
+        ("算法", ["算法", "复杂度", "链表", "数组", "排序"]),
+    ]
+
+    for topic, keywords in topic_rules:
+        if any(keyword in text for keyword in keywords):
+            return topic
+
+    return "编程基础"
+
+
+def _looks_like_learning_question(question: str, reply: str) -> bool:
+    text = f"{question} {reply}".lower()
+
+    if len(question.strip()) < 8:
+        return False
+
+    return any(keyword in text for keyword in _PROGRAMMING_KEYWORDS)
+
+
+def _compact_text(text: str, max_length: int) -> str:
+    normalized = _strip_markdown(text)
+    if len(normalized) <= max_length:
+        return normalized
+    return normalized[: max_length - 1] + "…"
+
+
+def _strip_markdown(text: str) -> str:
+    normalized = re.sub(r"```[\s\S]*?```", " ", text)
+    normalized = re.sub(r"`([^`]*)`", r"\1", normalized)
+    normalized = re.sub(r"!\[[^\]]*\]\([^)]+\)", " ", normalized)
+    normalized = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", normalized)
+    normalized = re.sub(r"#{1,6}\s*", " ", normalized)
+    normalized = re.sub(r"[*_~>-]+", " ", normalized)
+    normalized = re.sub(r"\s+", " ", normalized)
+    return normalized.strip()
+
+
+def _build_fallback_summary(question: str, reply: str) -> str:
+    topic = _infer_topic(question, reply)
+    cleaned_question = _compact_text(question, 36)
+
+    if topic == "编程基础":
+        return f"需要继续梳理“{cleaned_question}”这个知识点的概念、写法和最小示例。"
+
+    return f"需要继续梳理 {topic} 中“{cleaned_question}”这个知识点的核心概念、常见写法和使用场景。"
+
+
+def _build_fallback_gap_item(question: str, reply: str) -> dict | None:
+    if not _looks_like_learning_question(question, reply):
+        return None
+
+    topic = _infer_topic(question, reply)
+    title = _compact_text(question, 48)
+    summary = _build_fallback_summary(question, reply)
+
     return {
-        "summary": str(payload.get("summary", "")).strip() or "This is a knowledge point that still needs reinforcement.",
+        "topic": topic,
+        "question": title,
+        "summary": summary,
+        "mistakeType": "concept",
+        "mistakeReason": "本轮提问暴露出该知识点还需要进一步梳理。",
+        "improvementSuggestion": "回看本轮回答，补一个最小示例，并尝试用自己的话复述关键结论。",
+    }
+
+
+def _normalize_analysis(payload: dict) -> dict:
+    summary = str(payload.get("summary", "")).strip()
+    mistake_reason = str(payload.get("mistakeReason", "")).strip()
+    improvement_suggestion = str(payload.get("improvementSuggestion", "")).strip()
+
+    return {
+        "summary": _compact_text(summary, 90) or "这个知识点还需要继续巩固。",
         "mistakeType": _normalize_type(str(payload.get("mistakeType", ""))),
-        "mistakeReason": str(payload.get("mistakeReason", "")).strip()
-        or "The current understanding is not stable enough and needs further clarification.",
-        "improvementSuggestion": str(payload.get("improvementSuggestion", "")).strip()
-        or "Review the definition, common use cases, and a minimal example together.",
+        "mistakeReason": _compact_text(mistake_reason, 70) or "当前理解还不够稳定，需要进一步梳理。",
+        "improvementSuggestion": _compact_text(improvement_suggestion, 70)
+        or "回看概念、常见用法和一个最小示例。",
     }
 
 
@@ -163,11 +283,29 @@ def create_mistake_record(entry: dict) -> dict:
 
 def create_mistakes_from_assistant(question: str, reply: str) -> list[dict]:
     system_prompt, user_prompt = _build_gap_extraction_prompts(question=question, reply=reply)
-    raw_reply = generate_reply(system_prompt=system_prompt, user_prompt=user_prompt)
-    payload = _extract_json(raw_reply)
-    raw_items = payload.get("items")
+    raw_reply = ""
+
+    try:
+        raw_reply = generate_reply(system_prompt=system_prompt, user_prompt=user_prompt)
+        payload = _extract_json(raw_reply)
+        raw_items = payload.get("items")
+    except Exception as error:
+        print(
+            "[mistake-extraction] model json extraction failed",
+            {
+                "question": question,
+                "detail": str(error),
+                "rawReply": _compact_text(raw_reply, 500),
+            },
+        )
+        fallback_item = _build_fallback_gap_item(question=question, reply=reply)
+        raw_items = [fallback_item] if fallback_item else []
 
     if not isinstance(raw_items, list) or not raw_items:
+        fallback_item = _build_fallback_gap_item(question=question, reply=reply)
+        raw_items = [fallback_item] if fallback_item else []
+
+    if not raw_items:
         return []
 
     max_sort_order = db.session.query(func.max(MistakeRecord.sort_order)).scalar() or 0
@@ -219,6 +357,32 @@ def delete_mistake_record(record_id: int) -> None:
     db.session.delete(record)
     db.session.commit()
     _normalize_sort_order()
+
+
+def update_mistake_record(record_id: int, entry: dict) -> dict:
+    record = db.session.get(MistakeRecord, record_id)
+
+    if not record:
+        raise ValueError("知识点记录不存在")
+
+    topic = (entry.get("topic") or "").strip()
+    question = (entry.get("question") or "").strip()
+    reference_answer = (entry.get("referenceAnswer") or "").strip()
+    user_answer = (entry.get("userAnswer") or "").strip()
+    mistake_type = (entry.get("mistakeType") or record.mistake_type).strip()
+
+    if not topic or not question or not reference_answer:
+        raise ValueError("topic、question、referenceAnswer 字段不能为空")
+
+    record.topic = topic
+    record.question = question
+    record.user_answer = user_answer
+    record.reference_answer = reference_answer
+    record.mistake_type = _normalize_type(mistake_type)
+    record.updated_at = datetime.now(timezone.utc)
+
+    db.session.commit()
+    return record.to_dict()
 
 
 def move_mistake_record(record_id: int, direction: str) -> list[dict]:
