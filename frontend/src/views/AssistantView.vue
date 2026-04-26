@@ -11,7 +11,7 @@ import {
   deleteHistoryEntry,
   fetchHistory,
   fetchModes,
-  fetchRagReply,
+  streamRagReply,
   streamReply,
 } from '../services/api/assistant'
 
@@ -110,12 +110,26 @@ async function submitQuestion() {
     let finalReply = ''
 
     if (ragEnabled.value) {
-      const data = await fetchRagReply({
-        question: question.value.trim(),
-      })
-      finalReply = data.reply
-      answer.value = data.reply
-      ragSources.value = data.sources || []
+      await streamRagReply(
+        {
+          question: question.value.trim(),
+        },
+        {
+          onSources(sources) {
+            ragSources.value = sources
+          },
+          onChunk(chunk) {
+            answer.value += chunk
+          },
+          onDone(reply) {
+            finalReply = reply
+            answer.value = reply
+          },
+          onError(data) {
+            errorMessage.value = data.detail || data.message || '知识库增强回答失败'
+          },
+        }
+      )
     } else {
       await streamReply(
         {

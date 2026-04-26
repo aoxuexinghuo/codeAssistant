@@ -17,7 +17,15 @@ export function fetchReply(payload) {
 }
 
 export async function streamReply(payload, handlers = {}) {
-  const response = await fetch('/api/assistant/reply-stream', {
+  return streamEventReply('/api/assistant/reply-stream', payload, handlers)
+}
+
+export async function streamRagReply(payload, handlers = {}) {
+  return streamEventReply('/api/rag/reply-stream', payload, handlers)
+}
+
+async function streamEventReply(url, payload, handlers = {}) {
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -65,6 +73,8 @@ export async function streamReply(payload, handlers = {}) {
         handlers.onChunk?.(data.content)
       } else if (data.type === 'done') {
         handlers.onDone?.(data.reply)
+      } else if (data.type === 'sources') {
+        handlers.onSources?.(data.sources || [])
       } else if (data.type === 'error') {
         handlers.onError?.(data)
       }

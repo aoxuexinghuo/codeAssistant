@@ -16,7 +16,7 @@ from .services.mistake_service import (
 )
 from .services.mode_service import build_fallback_reply, get_mode_by_key, list_modes
 from .services.prompt_service import build_prompts
-from .services.rag_service import generate_rag_reply, rebuild_rag_index
+from .services.rag_service import generate_rag_reply, rebuild_rag_index, stream_rag_reply
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -245,6 +245,50 @@ def create_rag_reply():
         return jsonify({"ok": False, "message": "知识库增强回答失败", "detail": detail}), 502
 
     return jsonify({"ok": True, "data": result})
+
+
+@api_bp.route("/rag/reply-stream", methods=["POST"])
+def create_rag_reply_stream():
+    body = request.get_json(silent=True) or {}
+    question = (body.get("question") or "").strip()
+
+    if not question:
+        return jsonify({"ok": False, "message": "question 字段不能为空"}), 400
+
+    def event_stream():
+        try:
+            result = stream_rag_reply(question)
+            reply = ""
+
+            sources_payload = json.dumps(
+                {"type": "sources", "sources": result["sources"]},
+                ensure_ascii=False,
+            )
+            yield f"data: {sources_payload}\n\n"
+
+            for chunk in result["chunks"]:
+                reply += chunk
+                yield f"data: {json.dumps({'type': 'chunk', 'content': chunk}, ensure_ascii=False)}\n\n"
+
+            yield f"data: {json.dumps({'type': 'done', 'reply': reply}, ensure_ascii=False)}\n\n"
+        except Exception as error:
+            detail = str(error)
+            print("[rag] stream reply failed", {"question": question, "detail": detail})
+            payload = json.dumps(
+                {
+                    "type": "error",
+                    "message": "知识库增强回答失败",
+                    "detail": detail,
+                },
+                ensure_ascii=False,
+            )
+            yield f"data: {payload}\n\n"
+
+    return Response(
+        stream_with_context(event_stream()),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+    )
 
 
 def _validate_assistant_request():

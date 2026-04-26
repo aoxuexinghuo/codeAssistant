@@ -1,4 +1,4 @@
-from .llm_service import generate_reply
+from .llm_service import generate_reply, stream_reply
 from .retriever_service import rebuild_index, retrieve_documents
 
 
@@ -42,7 +42,19 @@ def _log_retrieval(question: str, documents: list[dict]) -> None:
         )
 
 
-def generate_rag_reply(question: str) -> dict:
+def _sources_from_documents(documents: list[dict]) -> list[dict]:
+    return [
+        {
+            "title": document["title"],
+            "file": document["file"],
+            "chunkIndex": document["chunkIndex"],
+            "score": document["score"],
+        }
+        for document in documents
+    ]
+
+
+def _build_rag_prompts(question: str) -> tuple[str, str, list[dict]]:
     documents = retrieve_documents(question)
     _log_retrieval(question, documents)
     context = _build_context(documents)
@@ -63,15 +75,18 @@ def generate_rag_reply(question: str) -> dict:
             "请给出简洁回答。",
         ]
     )
-    reply = generate_reply(system_prompt=system_prompt, user_prompt=user_prompt)
-    sources = [
-        {
-            "title": document["title"],
-            "file": document["file"],
-            "chunkIndex": document["chunkIndex"],
-            "score": document["score"],
-        }
-        for document in documents
-    ]
+    return system_prompt, user_prompt, documents
 
-    return {"reply": reply, "sources": sources}
+
+def generate_rag_reply(question: str) -> dict:
+    system_prompt, user_prompt, documents = _build_rag_prompts(question)
+    reply = generate_reply(system_prompt=system_prompt, user_prompt=user_prompt)
+    return {"reply": reply, "sources": _sources_from_documents(documents)}
+
+
+def stream_rag_reply(question: str):
+    system_prompt, user_prompt, documents = _build_rag_prompts(question)
+    return {
+        "sources": _sources_from_documents(documents),
+        "chunks": stream_reply(system_prompt=system_prompt, user_prompt=user_prompt),
+    }
