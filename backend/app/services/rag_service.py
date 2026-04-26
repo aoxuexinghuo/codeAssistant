@@ -24,8 +24,27 @@ def _build_context(documents: list[dict]) -> str:
     return "\n\n".join(parts)
 
 
+def _log_retrieval(question: str, documents: list[dict]) -> None:
+    if not documents:
+        print("[rag] no hit", {"question": question})
+        return
+
+    for document in documents:
+        print(
+            "[rag] hit",
+            {
+                "question": question,
+                "file": document["file"],
+                "title": document["title"],
+                "chunkIndex": document["chunkIndex"],
+                "score": document["score"],
+            },
+        )
+
+
 def generate_rag_reply(question: str) -> dict:
     documents = retrieve_documents(question)
+    _log_retrieval(question, documents)
     context = _build_context(documents)
     system_prompt = (
         "你是一个编程教学助手。"

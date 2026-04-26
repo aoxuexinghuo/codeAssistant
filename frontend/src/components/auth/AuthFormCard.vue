@@ -52,17 +52,17 @@ function handleSubmit() {
 
     <form class="auth-form" @submit.prevent="handleSubmit">
       <label>
-        用户名
+        <span>用户名</span>
         <input v-model.trim="form.username" type="text" placeholder="请输入用户名" required />
       </label>
 
       <label>
-        密码
+        <span>密码</span>
         <input v-model.trim="form.password" type="password" placeholder="请输入密码" required />
       </label>
 
       <label v-if="!isLogin">
-        确认密码
+        <span>确认密码</span>
         <input
           v-model.trim="form.confirmPassword"
           type="password"
@@ -71,7 +71,7 @@ function handleSubmit() {
         />
       </label>
 
-      <button type="submit">{{ isLogin ? '登录' : '注册' }}</button>
+      <button class="auth-submit-btn" type="submit">{{ isLogin ? '进入工作台' : '创建并进入' }}</button>
     </form>
 
     <p class="switch-text">

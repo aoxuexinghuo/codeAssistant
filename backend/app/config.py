@@ -28,6 +28,7 @@ class Settings:
     knowledge_dir: Path = KNOWLEDGE_DIR
     rag_index_path: Path = DATA_DIR / "rag_index.json"
     rag_top_k: int = int(os.getenv("RAG_TOP_K", "3"))
+    rag_min_score: float = float(os.getenv("RAG_MIN_SCORE", "0.25"))
     rag_chunk_size: int = int(os.getenv("RAG_CHUNK_SIZE", "500"))
     rag_chunk_overlap: int = int(os.getenv("RAG_CHUNK_OVERLAP", "80"))
 

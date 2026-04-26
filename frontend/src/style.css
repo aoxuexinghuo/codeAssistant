@@ -428,14 +428,18 @@ select {
   min-height: 100vh;
   display: grid;
   place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 16% 14%, rgba(37, 111, 97, 0.12), transparent 28%),
+    linear-gradient(135deg, #f3f7f5 0%, #fbfaf5 100%);
 }
 
 .auth-layout {
   width: 100%;
-  max-width: 980px;
+  max-width: 1040px;
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.75fr);
-  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+  gap: 18px;
 }
 
 .auth-card,
@@ -462,10 +466,10 @@ select {
 }
 
 .auth-hero-panel {
-  min-height: 460px;
+  min-height: 500px;
   align-content: space-between;
   background:
-    linear-gradient(135deg, rgba(37, 111, 97, 0.08), rgba(255, 255, 255, 0.92) 42%),
+    linear-gradient(135deg, rgba(37, 111, 97, 0.12), rgba(255, 255, 255, 0.92) 46%),
     var(--card);
 }
 
@@ -506,6 +510,31 @@ select {
   background: #f9fbfa;
 }
 
+.auth-step-card {
+  position: relative;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 12px;
+}
+
+.auth-step-card strong,
+.auth-step-card span:not(.auth-step-index) {
+  grid-column: 2;
+}
+
+.auth-step-index {
+  grid-row: 1 / span 2;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #e8f3ef;
+  color: var(--accent-strong);
+  font-weight: 800;
+  font-size: 12px;
+}
+
 .mini-card strong {
   font-size: 15px;
 }
@@ -518,8 +547,8 @@ select {
 .auth-card {
   display: grid;
   gap: 18px;
-  align-content: start;
-  min-height: 460px;
+  align-content: center;
+  min-height: 500px;
 }
 
 .auth-card h2 {
@@ -561,6 +590,10 @@ select {
 .auth-form button {
   width: 100%;
   min-height: 46px;
+}
+
+.auth-submit-btn {
+  margin-top: 4px;
 }
 
 .switch-text {
@@ -1163,6 +1196,32 @@ pre {
   background: rgba(255, 255, 255, 0.6);
 }
 
+.mistake-hero {
+  background:
+    linear-gradient(135deg, rgba(37, 111, 97, 0.08), rgba(255, 255, 255, 0.96) 48%),
+    var(--card);
+}
+
+.mistake-board-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 0.9fr);
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 16px;
+}
+
+.mistake-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px 130px;
+  gap: 10px;
+}
+
+.mistake-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
 .mistake-card {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1171,6 +1230,14 @@ pre {
   box-shadow: var(--shadow);
   display: grid;
   gap: 14px;
+  align-content: start;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.mistake-card:hover {
+  transform: translateY(-3px);
+  border-color: #aacfc3;
+  box-shadow: 0 18px 34px rgba(31, 45, 50, 0.1);
 }
 
 .mistake-card.is-dragging {
@@ -1206,6 +1273,10 @@ pre {
   color: var(--muted);
   font-size: 14px;
   line-height: 1.7;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .mistake-note {
@@ -1288,7 +1359,9 @@ pre {
 
   .page-grid.two-column,
   .learning-layout,
-  .home-entry-grid {
+  .home-entry-grid,
+  .mistake-board-head,
+  .mistake-filters {
     grid-template-columns: 1fr;
   }
 }

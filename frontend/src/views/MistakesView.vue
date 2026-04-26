@@ -20,6 +20,9 @@ const submitting = ref(false)
 const updating = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const searchKeyword = ref('')
+const topicFilter = ref('')
+const typeFilter = ref('')
 let successTimer = null
 
 const form = reactive({
@@ -46,6 +49,28 @@ const typeLabels = {
 }
 
 const totalCount = computed(() => mistakes.value.length)
+const topicOptions = computed(() => [...new Set(mistakes.value.map((item) => item.topic).filter(Boolean))])
+const filteredMistakes = computed(() => {
+  const keyword = searchKeyword.value.trim().toLowerCase()
+
+  return mistakes.value.filter((item) => {
+    const text = [
+      item.topic,
+      item.question,
+      item.referenceAnswer,
+      item.mistakeReason,
+      item.improvementSuggestion,
+      item.userAnswer,
+    ]
+      .join(' ')
+      .toLowerCase()
+    const keywordMatched = !keyword || text.includes(keyword)
+    const topicMatched = !topicFilter.value || item.topic === topicFilter.value
+    const typeMatched = !typeFilter.value || item.mistakeType === typeFilter.value
+
+    return keywordMatched && topicMatched && typeMatched
+  })
+})
 
 function buildCardSummary(item) {
   const parts = [item.referenceAnswer, item.mistakeReason, item.improvementSuggestion]
@@ -232,11 +257,11 @@ onMounted(() => {
 
 <template>
   <section class="page-stack">
-    <header class="page-hero compact-hero">
+    <header class="page-hero compact-hero mistake-hero">
       <div>
         <div class="badge">Review</div>
-        <h2>薄弱点</h2>
-        <p class="panel-desc">自动沉淀和手动补充的知识卡片。</p>
+        <h2>薄弱点卡片</h2>
+        <p class="panel-desc">把答疑中暴露出的知识点整理成可复盘的卡片。</p>
       </div>
       <button class="primary-link action-link" type="button" @click="createVisible = true">新增</button>
     </header>
@@ -244,8 +269,22 @@ onMounted(() => {
     <p v-if="successMessage" class="success-toast" aria-live="polite">{{ successMessage }}</p>
 
     <section class="panel">
-      <div class="section-heading">
-        <h3>{{ totalCount }} 条记录</h3>
+      <div class="mistake-board-head">
+        <div>
+          <h3>{{ filteredMistakes.length }} / {{ totalCount }} 条记录</h3>
+          <p class="panel-desc">支持搜索、筛选和拖拽排序。</p>
+        </div>
+        <div class="mistake-filters">
+          <input v-model="searchKeyword" type="text" placeholder="搜索知识点" />
+          <select v-model="topicFilter">
+            <option value="">全部主题</option>
+            <option v-for="topic in topicOptions" :key="topic" :value="topic">{{ topic }}</option>
+          </select>
+          <select v-model="typeFilter">
+            <option value="">全部类型</option>
+            <option v-for="(label, value) in typeLabels" :key="value" :value="value">{{ label }}</option>
+          </select>
+        </div>
       </div>
 
       <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
@@ -254,9 +293,9 @@ onMounted(() => {
         <p>正在加载...</p>
       </div>
 
-      <div v-else-if="mistakes.length" class="card-list">
+      <div v-else-if="filteredMistakes.length" class="mistake-grid">
         <article
-          v-for="item in mistakes"
+          v-for="item in filteredMistakes"
           :key="item.id"
           class="mistake-card"
           :class="{ 'is-dragging': draggingId === item.id }"
@@ -306,7 +345,7 @@ onMounted(() => {
       </div>
 
       <div v-else class="history-empty">
-        <p>还没有记录。</p>
+        <p>{{ mistakes.length ? '没有匹配的知识卡片。' : '还没有记录。' }}</p>
       </div>
     </section>
 

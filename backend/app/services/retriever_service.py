@@ -75,8 +75,9 @@ def _load_index() -> list[dict]:
     return payload.get("documents", [])
 
 
-def retrieve_documents(question: str, top_k: int | None = None) -> list[dict]:
+def retrieve_documents(question: str, top_k: int | None = None, min_score: float | None = None) -> list[dict]:
     query_tokens = tokenize_text(question)
+    score_threshold = settings.rag_min_score if min_score is None else min_score
 
     if not query_tokens:
         return []
@@ -90,6 +91,9 @@ def retrieve_documents(question: str, top_k: int | None = None) -> list[dict]:
             continue
 
         score = len(matched) / max(1, len(query_tokens))
+        if score < score_threshold:
+            continue
+
         scored.append((score, document))
 
     scored.sort(key=lambda item: item[0], reverse=True)

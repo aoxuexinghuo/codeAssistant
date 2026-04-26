@@ -39,6 +39,28 @@ export const learningTopics = [
     ],
   },
   {
+    slug: 'python',
+    initial: 'Py',
+    title: 'Python',
+    level: '入门友好',
+    desc: '适合快速理解编程基础、脚本处理和后端入门。',
+    summary: 'Python 语法简洁，适合作为编程入门和数据处理、Web 开发的起点。',
+    audience: ['编程初学者', '想快速做脚本、自动化或后端原型的人'],
+    focus: ['基础语法', '函数与模块', '列表和字典', '异常处理'],
+    links: [
+      {
+        label: 'Python Tutorial',
+        url: 'https://docs.python.org/3/tutorial/',
+        source: 'Python',
+      },
+      {
+        label: 'Python Standard Library',
+        url: 'https://docs.python.org/3/library/',
+        source: 'Python',
+      },
+    ],
+  },
+  {
     slug: 'go',
     initial: 'Go',
     title: 'Go',

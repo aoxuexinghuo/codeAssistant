@@ -155,6 +155,8 @@ $env:LLM_MODEL="qvq-max-2025-03-25"
 $env:LLM_TEMPERATURE="0.7"
 $env:LLM_MAX_TOKENS="1200"
 $env:DATABASE_URL="sqlite:///backend/data/programming_assistant.db"
+$env:RAG_TOP_K="3"
+$env:RAG_MIN_SCORE="0.25"
 ```
 
 说明：
@@ -399,6 +401,8 @@ POST /api/rag/reply
 - 开启知识库增强后，回答下方会展示参考来源。
 - 当前检索层是轻量实现，后续可以替换为 `Chroma` 或 `FAISS`。
 - 后端启动时会自动重建一次 RAG 索引，普通用户无需手动操作。
+- RAG 检索会过滤低相关片段，默认最低分数为 `0.25`。
+- 后端控制台会打印 `[rag] hit` 或 `[rag] no hit`，用于观察命中文档和分数。
 
 当前已内置示例资料：
 
@@ -407,6 +411,7 @@ backend/knowledge/c-struct.md
 backend/knowledge/c-pointer.md
 backend/knowledge/java-oop.md
 backend/knowledge/java-collections.md
+backend/knowledge/python-basics.md
 backend/knowledge/go-goroutine.md
 backend/knowledge/go-channel.md
 backend/knowledge/rust-ownership.md

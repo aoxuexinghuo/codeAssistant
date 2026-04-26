@@ -1,16 +1,16 @@
 <script setup>
 const highlights = [
   {
-    title: '三种答疑模式',
-    text: '调试、学习、面试，各自使用不同回答策略。',
+    title: '提问',
+    text: '按调试、学习、面试场景组织回答。',
   },
   {
-    title: '薄弱点沉淀',
-    text: '答疑后自动整理可能需要复盘的知识点。',
+    title: '沉淀',
+    text: '自动整理需要复盘的知识卡片。',
   },
   {
-    title: '资料入口',
-    text: '按语言和框架进入官方学习资料。',
+    title: '补齐',
+    text: '结合本地知识库和学习资料继续巩固。',
   },
 ]
 </script>
@@ -26,11 +26,12 @@ const highlights = [
     </div>
 
     <p class="subtitle">
-      面向编程学习、排错和面试准备的答疑工作台。
+      用答疑、知识库和薄弱点卡片，把一次次提问整理成可复盘的学习过程。
     </p>
 
     <div class="hero-grid">
-      <div v-for="item in highlights" :key="item.title" class="mini-card">
+      <div v-for="(item, index) in highlights" :key="item.title" class="mini-card auth-step-card">
+        <span class="auth-step-index">0{{ index + 1 }}</span>
         <strong>{{ item.title }}</strong>
         <span>{{ item.text }}</span>
       </div>
