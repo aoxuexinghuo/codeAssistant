@@ -387,6 +387,34 @@ select {
   font-weight: 700;
 }
 
+.knowledge-toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px;
+}
+
+.topic-filter {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 13px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.topic-filter.active {
+  border-color: #9ccfc0;
+  background: #e8f4ef;
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.knowledge-detail-card {
+  max-width: 900px;
+  width: 100%;
+}
+
 .list-row {
   padding: 16px;
   display: grid;

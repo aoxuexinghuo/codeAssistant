@@ -3,6 +3,7 @@ import json
 from flask import Blueprint, Response, jsonify, request, stream_with_context
 
 from .services.history_service import add_history_entry, clear_history, delete_history_entry, list_history
+from .services.knowledge_service import get_knowledge_item, list_knowledge_items
 from .services.llm_service import generate_reply, stream_reply
 from .services.mistake_service import (
     create_mistake_record,
@@ -23,6 +24,21 @@ api_bp = Blueprint("api", __name__, url_prefix="/api")
 @api_bp.route("/modes", methods=["GET"])
 def get_modes():
     return jsonify({"ok": True, "data": list_modes()})
+
+
+@api_bp.route("/knowledge", methods=["GET"])
+def get_knowledge():
+    return jsonify({"ok": True, "data": list_knowledge_items()})
+
+
+@api_bp.route("/knowledge/<path:file_name>", methods=["GET"])
+def get_knowledge_detail(file_name: str):
+    try:
+        item = get_knowledge_item(file_name)
+    except ValueError as error:
+        return jsonify({"ok": False, "message": str(error)}), 404
+
+    return jsonify({"ok": True, "data": item})
 
 
 @api_bp.route("/history", methods=["GET"])

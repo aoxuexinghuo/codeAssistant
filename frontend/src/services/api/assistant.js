@@ -4,6 +4,14 @@ export function fetchModes() {
   return apiClient.get('/api/modes')
 }
 
+export function fetchKnowledgeList() {
+  return apiClient.get('/api/knowledge')
+}
+
+export function fetchKnowledgeDetail(fileName) {
+  return apiClient.get(`/api/knowledge/${encodeURIComponent(fileName)}`)
+}
+
 export function fetchReply(payload) {
   return apiClient.post('/api/assistant/reply', payload)
 }

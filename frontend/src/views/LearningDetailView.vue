@@ -1,73 +1,57 @@
 <script setup>
-import { computed } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { getLearningTopic } from '../data/learningResources'
+import MarkdownRenderer from '../components/common/MarkdownRenderer.vue'
+import { fetchKnowledgeDetail } from '../services/api/assistant'
 
 const route = useRoute()
-const resource = computed(() => getLearningTopic(route.params.slug))
+const resource = ref(null)
+const loading = ref(true)
+const errorMessage = ref('')
+
+async function loadResource() {
+  loading.value = true
+  errorMessage.value = ''
+
+  try {
+    resource.value = await fetchKnowledgeDetail(route.params.slug)
+  } catch (error) {
+    resource.value = null
+    errorMessage.value = error.message
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(() => route.params.slug, loadResource)
+
+onMounted(() => {
+  loadResource()
+})
 </script>
 
 <template>
-  <section class="page-stack" v-if="resource">
-    <header class="page-hero compact-hero">
+  <section class="page-stack">
+    <header class="page-hero compact-hero" v-if="resource">
       <div>
-        <div class="badge">Learning</div>
+        <div class="badge">Knowledge</div>
         <h2>{{ resource.title }}</h2>
         <p class="panel-desc">{{ resource.summary }}</p>
       </div>
-      <span class="topic-pill">{{ resource.level }}</span>
+      <span class="topic-pill">{{ resource.topic }}</span>
     </header>
 
-    <section class="page-grid two-column">
-      <article class="panel">
-        <div class="section-heading">
-          <h3>学习重点</h3>
-        </div>
-        <div class="list-block">
-          <article v-for="item in resource.focus" :key="item" class="list-row">
-            <span class="row-tag">重点</span>
-            <strong>{{ item }}</strong>
-          </article>
-        </div>
-      </article>
-
-      <article class="panel">
-        <div class="section-heading">
-          <h3>适合人群</h3>
-        </div>
-        <div class="list-block">
-          <article v-for="item in resource.audience" :key="item" class="list-row">
-            <span class="row-tag">适合</span>
-            <strong>{{ item }}</strong>
-          </article>
-        </div>
-      </article>
-    </section>
-
-    <section class="resource-grid">
-      <a
-        v-for="link in resource.links"
-        :key="link.url"
-        :href="link.url"
-        target="_blank"
-        rel="noreferrer"
-        class="resource-card interactive-card"
-      >
-        <span class="row-tag">{{ link.source }}</span>
-        <strong>{{ link.label }}</strong>
-        <p>打开官方资料</p>
-      </a>
-    </section>
-  </section>
-
-  <section class="page-stack" v-else>
-    <header class="page-hero compact-hero">
+    <header class="page-hero compact-hero" v-else>
       <div>
-        <div class="badge">Learning</div>
-        <h2>资料不存在</h2>
-        <p class="panel-desc">未找到对应主题。</p>
+        <div class="badge">Knowledge</div>
+        <h2>{{ loading ? '正在加载资料' : '资料不存在' }}</h2>
+        <p class="panel-desc">{{ loading ? '请稍候。' : errorMessage || '未找到对应资料。' }}</p>
       </div>
       <RouterLink to="/learning" class="primary-link">返回学习中心</RouterLink>
     </header>
+
+    <article v-if="resource" class="panel knowledge-detail-card">
+      <MarkdownRenderer :content="resource.content" />
+    </article>
   </section>
 </template>
