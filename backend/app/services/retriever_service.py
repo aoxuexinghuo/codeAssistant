@@ -1,70 +1,18 @@
 import json
-import re
-from pathlib import Path
 
 from ..config import settings
 from .embedding_service import tokenize_text
-from .markdown_service import parse_markdown_document
-
-
-def _clean_markdown(text: str) -> str:
-    text = re.sub(r"```[a-zA-Z0-9_-]*\n([\s\S]*?)```", r"\1", text)
-    text = re.sub(r"`([^`]*)`", r"\1", text)
-    text = re.sub(r"#{1,6}\s*", " ", text)
-    text = re.sub(r"[*_~>\-]+", " ", text)
-    return re.sub(r"\s+", " ", text).strip()
-
-
-def _title_from_markdown(file_path: Path, content: str) -> str:
-    match = re.search(r"^#\s+(.+)$", content, flags=re.MULTILINE)
-    return match.group(1).strip() if match else file_path.stem
-
-
-def _split_text(text: str) -> list[str]:
-    chunk_size = settings.rag_chunk_size
-    overlap = min(settings.rag_chunk_overlap, max(0, chunk_size // 2))
-    cleaned = _clean_markdown(text)
-
-    if not cleaned:
-        return []
-
-    chunks: list[str] = []
-    start = 0
-
-    while start < len(cleaned):
-        end = min(start + chunk_size, len(cleaned))
-        chunks.append(cleaned[start:end].strip())
-
-        if end >= len(cleaned):
-            break
-
-        start = max(0, end - overlap)
-
-    return [chunk for chunk in chunks if chunk]
+from .knowledge_chunk_service import load_knowledge_chunks
 
 
 def rebuild_index() -> dict:
-    documents: list[dict] = []
-
-    for file_path in sorted(settings.knowledge_dir.glob("*.md")):
-        raw_content = file_path.read_text(encoding="utf-8")
-        metadata, content = parse_markdown_document(raw_content)
-        title = metadata.get("title") or _title_from_markdown(file_path, content)
-
-        for index, chunk in enumerate(_split_text(content), start=1):
-            documents.append(
-                {
-                    "id": f"{file_path.name}#{index}",
-                    "title": title,
-                    "file": file_path.name,
-                    "chunkIndex": index,
-                    "content": chunk,
-                    "topic": metadata.get("topic") or "",
-                    "level": metadata.get("level") or "",
-                    "tags": metadata.get("tags") or [],
-                    "tokens": sorted(tokenize_text(f"{title} {chunk}")),
-                }
-            )
+    documents = [
+        {
+            **document,
+            "tokens": sorted(tokenize_text(f"{document['title']} {document['content']}")),
+        }
+        for document in load_knowledge_chunks()
+    ]
 
     payload = {"documents": documents}
     settings.rag_index_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -81,6 +29,18 @@ def _load_index() -> list[dict]:
 
 
 def retrieve_documents(question: str, top_k: int | None = None, min_score: float | None = None) -> list[dict]:
+    if settings.rag_retriever_type == "vector":
+        try:
+            from .vector_store_service import search_vector_store
+
+            return search_vector_store(question=question, top_k=top_k, min_score=min_score)
+        except Exception as error:
+            print("[rag] vector search fallback", {"detail": str(error)})
+
+    return retrieve_documents_by_keyword(question=question, top_k=top_k, min_score=min_score)
+
+
+def retrieve_documents_by_keyword(question: str, top_k: int | None = None, min_score: float | None = None) -> list[dict]:
     query_tokens = tokenize_text(question)
     score_threshold = settings.rag_min_score if min_score is None else min_score
 

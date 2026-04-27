@@ -45,6 +45,8 @@
 - `SQLite`
 - `LangChain`
 - `langchain-openai`
+- `Chroma`
+- `Embedding`
 - `OpenAI-compatible` 模型接口
 
 ## 项目结构
@@ -54,15 +56,18 @@
 ├─ backend
 │  ├─ app
 │  │  ├─ services
-│  │  │  ├─ embedding_service.py     # 轻量检索分词，占位 Embedding 层
+│  │  │  ├─ embedding_service.py     # 关键词检索分词
 │  │  │  ├─ history_service.py       # 会话历史
+│  │  │  ├─ knowledge_chunk_service.py # 知识库清洗与切片
 │  │  │  ├─ knowledge_service.py     # 本地 Markdown 知识库读取
 │  │  │  ├─ llm_service.py           # LangChain 模型调用
+│  │  │  ├─ markdown_service.py      # Markdown 元数据解析
 │  │  │  ├─ mistake_service.py       # 薄弱点卡片
 │  │  │  ├─ mode_service.py          # 答疑模式配置
 │  │  │  ├─ prompt_service.py        # 提示词
 │  │  │  ├─ rag_service.py           # RAG 编排
-│  │  │  └─ retriever_service.py     # 本地检索
+│  │  │  ├─ retriever_service.py     # 检索入口与关键词兜底
+│  │  │  └─ vector_store_service.py  # Chroma 向量检索
 │  │  ├─ __init__.py                 # Flask 应用工厂
 │  │  ├─ config.py                   # 配置
 │  │  ├─ extensions.py               # Flask 扩展
@@ -70,8 +75,9 @@
 │  │  └─ routes.py                   # API 路由
 │  ├─ data
 │  │  ├─ programming_assistant.db    # SQLite 数据库
-│  │  └─ rag_index.json              # RAG 本地索引
+│  │  └─ rag_index.json              # 关键词检索兜底索引
 │  ├─ knowledge                      # 本地 Markdown 知识库
+│  ├─ vector_store                   # Chroma 向量库
 │  ├─ requirements.txt
 │  ├─ package.json
 │  └─ server.py
@@ -138,12 +144,68 @@ npm --prefix frontend install
 
 后端使用 `LangChain` 的 `ChatOpenAI` 接入 OpenAI-compatible 模型服务。
 
+### 基础聊天模型配置
+
 PowerShell 示例：
 
 ```powershell
 $env:DASHSCOPE_API_KEY="你的 API Key"
 $env:LLM_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
 $env:LLM_MODEL="qvq-max-2025-03-25"
+```
+
+### API Key 关系
+
+项目中有三个和模型调用有关的 Key 配置：
+
+```text
+DASHSCOPE_API_KEY   阿里云百炼平台的 API Key
+LLM_API_KEY         聊天模型调用使用的 Key
+EMBEDDING_API_KEY   Embedding 向量模型调用使用的 Key
+```
+
+它们不是三种必须分别申请的 Key。通常情况下，如果聊天模型和 Embedding 模型都使用阿里云百炼，可以只配置：
+
+```powershell
+$env:DASHSCOPE_API_KEY="你的百炼 API Key"
+```
+
+项目会按下面的优先级读取 Embedding Key：
+
+```text
+EMBEDDING_API_KEY
+→ LLM_API_KEY
+→ DASHSCOPE_API_KEY
+```
+
+也就是说，`EMBEDDING_API_KEY` 只是项目里给“向量化资料”这一步单独预留的配置名。大多数情况下可以直接复用 `DASHSCOPE_API_KEY`。
+
+只有在下面这种情况，才需要单独设置 `EMBEDDING_API_KEY`：
+
+```text
+聊天模型使用一个平台或账号
+Embedding 模型使用另一个平台或账号
+```
+
+示例：
+
+```powershell
+$env:EMBEDDING_API_KEY="你的 Embedding 服务 Key"
+$env:EMBEDDING_BASE_URL="Embedding 服务的 OpenAI-compatible 地址"
+$env:EMBEDDING_MODEL="对应的 Embedding 模型名"
+```
+
+### 向量检索配置
+
+如果复用阿里云百炼的 Key，可以这样配置：
+
+```powershell
+$env:DASHSCOPE_API_KEY="你的百炼 API Key"
+$env:LLM_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
+$env:LLM_MODEL="qvq-max-2025-03-25"
+
+$env:RAG_RETRIEVER_TYPE="vector"
+$env:EMBEDDING_MODEL="text-embedding-v4"
 ```
 
 可选配置：
@@ -156,14 +218,21 @@ $env:RAG_TOP_K="3"
 $env:RAG_MIN_SCORE="0.25"
 $env:RAG_CHUNK_SIZE="500"
 $env:RAG_CHUNK_OVERLAP="80"
+$env:RAG_RETRIEVER_TYPE="vector"
+$env:EMBEDDING_MODEL="text-embedding-v4"
 ```
 
 说明：
 
-- `LLM_API_KEY` 和 `DASHSCOPE_API_KEY` 二选一即可。
+- `LLM_API_KEY` 和 `DASHSCOPE_API_KEY` 二选一即可；使用阿里云百炼时通常只配置 `DASHSCOPE_API_KEY`。
 - `LLM_BASE_URL` 填写兼容 OpenAI 协议的模型服务地址。
 - `LLM_MODEL` 填写当前账号可用的模型名称。
+- `RAG_RETRIEVER_TYPE=vector` 使用 Chroma 向量检索；设置为 `keyword` 可切回关键词检索。
+- `EMBEDDING_API_KEY`、`EMBEDDING_BASE_URL` 可单独配置；不配置时默认复用 `LLM_API_KEY` 或 `DASHSCOPE_API_KEY`。
+- `EMBEDDING_MODEL` 需要填写当前账号支持的 Embedding 模型。
 - 后端启动时会自动重建 RAG 索引。
+
+注意：向量检索在重建 Chroma 索引时会把 `backend/knowledge` 中的资料内容发送给 Embedding 服务生成向量。如果资料包含隐私内容，请先确认所使用的 Embedding 服务是否可信，或将 `RAG_RETRIEVER_TYPE` 设置为 `keyword`。
 
 ## 启动项目
 
@@ -299,14 +368,16 @@ backend/knowledge/vue-reactivity.md
 
 ## RAG 机制
 
-当前 RAG 是第一版轻量实现，流程如下：
+当前 RAG 已支持 `Chroma + Embedding` 向量检索，并保留关键词检索作为兜底。
 
 ```text
 读取 backend/knowledge Markdown
 → 清洗和切分文本
-→ 生成本地 rag_index.json
+→ 调用 Embedding 模型生成向量
+→ 写入 Chroma 本地向量库
 → 用户提问
-→ 关键词检索 top_k 片段
+→ 问题向量化
+→ 语义检索 top_k 片段
 → 过滤低相关片段
 → 拼接上下文
 → 调用大模型
@@ -316,13 +387,19 @@ backend/knowledge/vue-reactivity.md
 当前 RAG 特点：
 
 - 使用本地 Markdown 作为知识库。
-- 后端启动时自动重建索引。
+- 后端启动时自动重建关键词索引和 Chroma 向量库。
 - 支持普通 RAG 回答和 RAG 流式回答。
+- 支持 `/api/rag/search` 查看实际命中的资料片段和分数。
 - 默认 `RAG_TOP_K=3`。
 - 默认 `RAG_MIN_SCORE=0.25`。
 - 后端控制台输出 `[rag] hit` 或 `[rag] no hit` 日志。
+- 如果 Chroma、Embedding 配置或依赖不可用，会自动回退到关键词检索。
 
-后续可以将 `retriever_service.py` 替换为 `Chroma` 或 `FAISS` 向量检索。
+如果暂时不想调用外部 Embedding 服务，可以使用：
+
+```powershell
+$env:RAG_RETRIEVER_TYPE="keyword"
+```
 
 ## 提示词策略
 
@@ -396,19 +473,14 @@ POST /api/mistakes/reorder
 
 ## 后续扩展方向
 
-### 1. Chroma + Embedding
+### 1. 优化向量检索质量
 
-当前 RAG 使用轻量关键词检索。后续可升级为：
+当前已经接入 `Chroma + Embedding`，后续可以继续优化：
 
-```text
-Markdown
-→ Embedding
-→ Chroma / FAISS
-→ 语义检索
-→ RAG 回答
-```
-
-这样能提升同义问题和语义相近问题的检索效果。
+- 调整 chunk 大小和 overlap。
+- 对不同 topic 使用不同检索阈值。
+- 增加 rerank 重排模型。
+- 增加混合检索：关键词召回 + 向量召回。
 
 ### 2. 薄弱点关联资料来源
 

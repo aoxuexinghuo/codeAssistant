@@ -3,7 +3,25 @@ from .retriever_service import rebuild_index, retrieve_documents
 
 
 def rebuild_rag_index() -> dict:
-    return rebuild_index()
+    keyword_result = rebuild_index()
+
+    if keyword_result and keyword_result.get("documentCount", 0) == 0:
+        return {"keyword": keyword_result}
+
+    try:
+        from .vector_store_service import rebuild_vector_store
+
+        vector_result = rebuild_vector_store()
+        return {"keyword": keyword_result, "vector": vector_result}
+    except Exception as error:
+        print("[rag] vector index rebuild skipped", {"detail": str(error)})
+        return {
+            "keyword": keyword_result,
+            "vector": {
+                "enabled": False,
+                "reason": str(error),
+            },
+        }
 
 
 def search_rag_documents(question: str) -> list[dict]:
