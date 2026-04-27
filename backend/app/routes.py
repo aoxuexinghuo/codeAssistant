@@ -16,7 +16,7 @@ from .services.mistake_service import (
 )
 from .services.mode_service import build_fallback_reply, get_mode_by_key, list_modes
 from .services.prompt_service import build_prompts
-from .services.rag_service import generate_rag_reply, rebuild_rag_index, stream_rag_reply
+from .services.rag_service import generate_rag_reply, rebuild_rag_index, search_rag_documents, stream_rag_reply
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -227,6 +227,21 @@ def rebuild_rag():
         return jsonify({"ok": False, "message": "知识库索引重建失败", "detail": str(error)}), 500
 
     return jsonify({"ok": True, "data": result})
+
+
+@api_bp.route("/rag/search", methods=["GET"])
+def search_rag():
+    question = (request.args.get("q") or "").strip()
+
+    if not question:
+        return jsonify({"ok": False, "message": "q 参数不能为空"}), 400
+
+    try:
+        documents = search_rag_documents(question)
+    except Exception as error:
+        return jsonify({"ok": False, "message": "知识库检索失败", "detail": str(error)}), 500
+
+    return jsonify({"ok": True, "data": documents})
 
 
 @api_bp.route("/rag/reply", methods=["POST"])

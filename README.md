@@ -45,7 +45,7 @@
 - `SQLite`
 - `LangChain`
 - `langchain-openai`
-- OpenAI-compatible 模型接口
+- `OpenAI-compatible` 模型接口
 
 ## 项目结构
 

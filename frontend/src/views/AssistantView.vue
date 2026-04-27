@@ -11,6 +11,7 @@ import {
   deleteHistoryEntry,
   fetchHistory,
   fetchModes,
+  fetchRagSearch,
   streamRagReply,
   streamReply,
 } from '../services/api/assistant'
@@ -33,6 +34,7 @@ const errorMessage = ref('')
 const autoExtractEnabled = ref(true)
 const ragEnabled = ref(false)
 const ragSources = ref([])
+const ragHits = ref([])
 const extractionMessage = ref('')
 const extractionState = ref('')
 let extractionTimer = null
@@ -104,15 +106,17 @@ async function submitQuestion() {
   extractionMessage.value = ''
   extractionState.value = ''
   ragSources.value = []
+  ragHits.value = []
   answer.value = ''
 
   try {
     let finalReply = ''
 
     if (ragEnabled.value) {
+      const searchQuestion = question.value.trim()
       await streamRagReply(
         {
-          question: question.value.trim(),
+          question: searchQuestion,
         },
         {
           onSources(sources) {
@@ -130,6 +134,16 @@ async function submitQuestion() {
           },
         }
       )
+
+      try {
+        ragHits.value = await fetchRagSearch(searchQuestion)
+      } catch (error) {
+        console.warn('[rag-search] failed', {
+          message: error?.message,
+          detail: error?.detail,
+          status: error?.status,
+        })
+      }
     } else {
       await streamReply(
         {
@@ -298,6 +312,7 @@ onMounted(() => {
         :auto-extract-enabled="autoExtractEnabled"
         :rag-enabled="ragEnabled"
         :rag-sources="ragSources"
+        :rag-hits="ragHits"
         :extraction-message="extractionMessage"
         :extraction-state="extractionState"
         @update:question="question = $event"

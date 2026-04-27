@@ -114,6 +114,10 @@ export function fetchRagReply(payload) {
   return apiClient.post('/api/rag/reply', payload)
 }
 
+export function fetchRagSearch(question) {
+  return apiClient.get('/api/rag/search', { q: question })
+}
+
 export function rebuildRagIndex() {
   return apiClient.post('/api/rag/rebuild', {})
 }

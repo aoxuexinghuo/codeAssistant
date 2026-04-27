@@ -7,6 +7,10 @@ const modeShortLabels = {
   interview: '面试',
 }
 
+function formatScore(score) {
+  return `${Math.round(Number(score || 0) * 100)}%`
+}
+
 defineProps({
   modes: {
     type: Array,
@@ -49,6 +53,10 @@ defineProps({
     default: false,
   },
   ragSources: {
+    type: Array,
+    default: () => [],
+  },
+  ragHits: {
     type: Array,
     default: () => [],
   },
@@ -98,6 +106,19 @@ defineEmits(['update:question', 'update:autoExtractEnabled', 'update:ragEnabled'
           </li>
         </ul>
       </div>
+      <details v-if="ragHits.length" class="rag-hit-details">
+        <summary>查看知识库命中 {{ ragHits.length }} 条</summary>
+        <div class="rag-hit-list">
+          <article v-for="hit in ragHits" :key="`${hit.file}-${hit.chunkIndex}`" class="rag-hit-item">
+            <div class="rag-hit-meta">
+              <strong>{{ hit.title }}</strong>
+              <span>{{ formatScore(hit.score) }}</span>
+            </div>
+            <p>{{ hit.content }}</p>
+            <small>{{ hit.file }} · 片段 {{ hit.chunkIndex }}</small>
+          </article>
+        </div>
+      </details>
     </div>
 
     <div class="composer">

@@ -6,6 +6,10 @@ def rebuild_rag_index() -> dict:
     return rebuild_index()
 
 
+def search_rag_documents(question: str) -> list[dict]:
+    return retrieve_documents(question)
+
+
 def _build_context(documents: list[dict]) -> str:
     if not documents:
         return "资料库中没有检索到相关片段。"

@@ -1061,6 +1061,70 @@ pre {
   margin-top: 4px;
 }
 
+.rag-hit-details {
+  border-top: 1px dashed var(--line);
+  margin-top: 4px;
+  padding-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.rag-hit-details summary {
+  width: fit-content;
+  color: var(--accent-strong);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.rag-hit-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.rag-hit-item {
+  border: 1px solid rgba(223, 231, 227, 0.86);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.62);
+  display: grid;
+  gap: 5px;
+}
+
+.rag-hit-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rag-hit-meta strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.rag-hit-meta span {
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: #eaf6f1;
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rag-hit-item p {
+  color: var(--muted);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.rag-hit-item small {
+  color: #8b9995;
+}
+
 .history-head {
   display: flex;
   align-items: flex-start;
