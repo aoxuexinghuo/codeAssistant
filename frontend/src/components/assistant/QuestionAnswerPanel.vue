@@ -102,7 +102,13 @@ defineEmits(['update:question', 'update:autoExtractEnabled', 'update:ragEnabled'
         <span>参考来源</span>
         <ul>
           <li v-for="source in ragSources" :key="`${source.file}-${source.chunkIndex}`">
-            {{ source.title }} / {{ source.file }}
+            <RouterLink
+              class="rag-source-link"
+              :to="{ name: 'learning-detail', params: { slug: source.file } }"
+            >
+              {{ source.title }}
+            </RouterLink>
+            <small>{{ source.file }} · 片段 {{ source.chunkIndex }}</small>
           </li>
         </ul>
       </div>
@@ -111,7 +117,12 @@ defineEmits(['update:question', 'update:autoExtractEnabled', 'update:ragEnabled'
         <div class="rag-hit-list">
           <article v-for="hit in ragHits" :key="`${hit.file}-${hit.chunkIndex}`" class="rag-hit-item">
             <div class="rag-hit-meta">
-              <strong>{{ hit.title }}</strong>
+              <RouterLink
+                class="rag-hit-title"
+                :to="{ name: 'learning-detail', params: { slug: hit.file } }"
+              >
+                {{ hit.title }}
+              </RouterLink>
               <span>{{ formatScore(hit.score) }}</span>
             </div>
             <p>{{ hit.content }}</p>

@@ -1,3 +1,10 @@
+---
+title: Go channel
+topic: Go
+level: intermediate
+tags: [channel, goroutine, 并发, select]
+---
+
 # Go channel
 
 ## 核心概念

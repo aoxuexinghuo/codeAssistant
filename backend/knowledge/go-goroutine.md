@@ -1,3 +1,10 @@
+---
+title: Go goroutine
+topic: Go
+level: beginner
+tags: [goroutine, 并发, WaitGroup, channel]
+---
+
 # Go goroutine
 
 ## 核心概念

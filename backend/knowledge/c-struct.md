@@ -1,3 +1,10 @@
+---
+title: C语言结构体
+topic: C语言
+level: beginner
+tags: [结构体, struct, 自定义类型, typedef]
+---
+
 # C语言结构体
 
 ## 核心概念

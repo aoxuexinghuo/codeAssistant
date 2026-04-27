@@ -1,3 +1,10 @@
+---
+title: Rust Result 错误处理
+topic: Rust
+level: intermediate
+tags: [Result, Option, 错误处理, match, unwrap]
+---
+
 # Rust Result 错误处理
 
 ## 核心概念

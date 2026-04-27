@@ -1,3 +1,10 @@
+---
+title: Python 基础
+topic: Python
+level: beginner
+tags: [变量, 列表, 字典, 函数, 异常]
+---
+
 # Python 基础
 
 ## 核心概念

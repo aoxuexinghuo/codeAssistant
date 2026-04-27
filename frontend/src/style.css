@@ -1061,6 +1061,31 @@ pre {
   margin-top: 4px;
 }
 
+.rag-source-list li {
+  line-height: 1.7;
+}
+
+.rag-source-list small {
+  margin-left: 6px;
+  color: #8b9995;
+}
+
+.rag-source-link,
+.rag-hit-title {
+  color: var(--accent-strong);
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.18s ease, text-decoration-color 0.18s ease;
+}
+
+.rag-source-link:hover,
+.rag-hit-title:hover {
+  color: #174b42;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
 .rag-hit-details {
   border-top: 1px dashed var(--line);
   margin-top: 4px;
@@ -1098,7 +1123,7 @@ pre {
   gap: 8px;
 }
 
-.rag-hit-meta strong {
+.rag-hit-title {
   color: var(--text);
   font-size: 13px;
 }

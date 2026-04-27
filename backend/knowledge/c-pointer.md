@@ -1,3 +1,10 @@
+---
+title: C语言指针
+topic: C语言
+level: intermediate
+tags: [指针, 地址, 解引用, 数组, 函数参数]
+---
+
 # C语言指针
 
 ## 核心概念

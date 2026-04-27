@@ -1,3 +1,10 @@
+---
+title: Vue 3 组件通信
+topic: Vue 3
+level: beginner
+tags: [组件通信, props, emit, v-model, provide, inject]
+---
+
 # Vue 3 组件通信
 
 ## 核心概念

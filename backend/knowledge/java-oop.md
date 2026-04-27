@@ -1,3 +1,10 @@
+---
+title: Java 面向对象
+topic: Java
+level: beginner
+tags: [面向对象, 类, 对象, 封装, 继承, 多态]
+---
+
 # Java 面向对象
 
 ## 核心概念

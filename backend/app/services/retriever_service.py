@@ -4,6 +4,7 @@ from pathlib import Path
 
 from ..config import settings
 from .embedding_service import tokenize_text
+from .markdown_service import parse_markdown_document
 
 
 def _clean_markdown(text: str) -> str:
@@ -46,8 +47,9 @@ def rebuild_index() -> dict:
     documents: list[dict] = []
 
     for file_path in sorted(settings.knowledge_dir.glob("*.md")):
-        content = file_path.read_text(encoding="utf-8")
-        title = _title_from_markdown(file_path, content)
+        raw_content = file_path.read_text(encoding="utf-8")
+        metadata, content = parse_markdown_document(raw_content)
+        title = metadata.get("title") or _title_from_markdown(file_path, content)
 
         for index, chunk in enumerate(_split_text(content), start=1):
             documents.append(
@@ -57,6 +59,9 @@ def rebuild_index() -> dict:
                     "file": file_path.name,
                     "chunkIndex": index,
                     "content": chunk,
+                    "topic": metadata.get("topic") or "",
+                    "level": metadata.get("level") or "",
+                    "tags": metadata.get("tags") or [],
                     "tokens": sorted(tokenize_text(f"{title} {chunk}")),
                 }
             )
@@ -106,6 +111,9 @@ def retrieve_documents(question: str, top_k: int | None = None, min_score: float
                 "file": document["file"],
                 "chunkIndex": document["chunkIndex"],
                 "content": document["content"],
+                "topic": document.get("topic", ""),
+                "level": document.get("level", ""),
+                "tags": document.get("tags", []),
                 "score": round(score, 4),
             }
         )

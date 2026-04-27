@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 
 from ..config import settings
+from .markdown_service import parse_markdown_document
 
 _TOPIC_RULES = [
     ("C 语言", ("c-", "c语言", "指针", "结构体")),
@@ -47,13 +48,16 @@ def _topic_from_file(file_name: str, title: str) -> str:
 
 
 def _knowledge_item(file_path: Path) -> dict:
-    content = _read_markdown(file_path)
+    raw_content = _read_markdown(file_path)
+    metadata, content = parse_markdown_document(raw_content)
     title = _title_from_content(file_path, content)
 
     return {
         "file": file_path.name,
-        "title": title,
-        "topic": _topic_from_file(file_path.name, title),
+        "title": metadata.get("title") or title,
+        "topic": metadata.get("topic") or _topic_from_file(file_path.name, title),
+        "level": metadata.get("level") or "beginner",
+        "tags": metadata.get("tags") or [],
         "summary": _summary_from_content(content),
     }
 
@@ -71,5 +75,6 @@ def get_knowledge_item(file_name: str) -> dict:
         raise ValueError("知识库资料不存在")
 
     item = _knowledge_item(file_path)
-    item["content"] = _read_markdown(file_path)
+    _, content = parse_markdown_document(_read_markdown(file_path))
+    item["content"] = content
     return item

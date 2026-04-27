@@ -1,3 +1,10 @@
+---
+title: Java 集合
+topic: Java
+level: beginner
+tags: [集合, List, Set, Map, 泛型]
+---
+
 # Java 集合
 
 ## 核心概念
