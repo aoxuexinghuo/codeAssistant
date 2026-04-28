@@ -54,6 +54,7 @@ onMounted(() => {
         <h2>学习中心</h2>
         <p class="panel-desc">浏览本地 Markdown 知识库，答疑时也会检索同一批资料。</p>
       </div>
+      <RouterLink to="/learning/upload" class="primary-link">上传个人资料</RouterLink>
     </header>
 
     <section class="panel knowledge-toolbar">
@@ -91,6 +92,7 @@ onMounted(() => {
             <strong>{{ item.title }}</strong>
             <span class="row-tag">{{ item.topic }}</span>
           </div>
+          <span v-if="item.scope === 'user'" class="topic-pill">个人资料</span>
           <p>{{ item.summary }}</p>
           <span class="topic-action">阅读资料 →</span>
         </div>

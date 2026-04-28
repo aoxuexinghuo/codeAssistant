@@ -5,13 +5,13 @@ from .embedding_service import tokenize_text
 from .knowledge_chunk_service import load_knowledge_chunks
 
 
-def rebuild_index() -> dict:
+def rebuild_index(user_id: int | None = None) -> dict:
     documents = [
         {
             **document,
             "tokens": sorted(tokenize_text(f"{document['title']} {document['content']}")),
         }
-        for document in load_knowledge_chunks()
+        for document in load_knowledge_chunks(user_id=user_id)
     ]
 
     payload = {"documents": documents}
@@ -28,8 +28,13 @@ def _load_index() -> list[dict]:
     return payload.get("documents", [])
 
 
-def retrieve_documents(question: str, top_k: int | None = None, min_score: float | None = None) -> list[dict]:
-    if settings.rag_retriever_type == "vector":
+def retrieve_documents(
+    question: str,
+    top_k: int | None = None,
+    min_score: float | None = None,
+    user_id: int | None = None,
+) -> list[dict]:
+    if settings.rag_retriever_type == "vector" and user_id is None:
         try:
             from .vector_store_service import search_vector_store
 
@@ -37,10 +42,15 @@ def retrieve_documents(question: str, top_k: int | None = None, min_score: float
         except Exception as error:
             print("[rag] vector search fallback", {"detail": str(error)})
 
-    return retrieve_documents_by_keyword(question=question, top_k=top_k, min_score=min_score)
+    return retrieve_documents_by_keyword(question=question, top_k=top_k, min_score=min_score, user_id=user_id)
 
 
-def retrieve_documents_by_keyword(question: str, top_k: int | None = None, min_score: float | None = None) -> list[dict]:
+def retrieve_documents_by_keyword(
+    question: str,
+    top_k: int | None = None,
+    min_score: float | None = None,
+    user_id: int | None = None,
+) -> list[dict]:
     query_tokens = tokenize_text(question)
     score_threshold = settings.rag_min_score if min_score is None else min_score
 
@@ -48,8 +58,10 @@ def retrieve_documents_by_keyword(question: str, top_k: int | None = None, min_s
         return []
 
     scored: list[tuple[float, dict]] = []
-    for document in _load_index():
-        document_tokens = set(document.get("tokens", []))
+    documents = load_knowledge_chunks(user_id=user_id) if user_id is not None else _load_index()
+
+    for document in documents:
+        document_tokens = set(document.get("tokens") or tokenize_text(f"{document.get('title', '')} {document.get('content', '')}"))
         matched = query_tokens & document_tokens
 
         if not matched:

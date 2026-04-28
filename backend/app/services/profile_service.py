@@ -26,8 +26,8 @@ _TOPIC_KEYWORDS = {
 }
 
 
-def get_or_create_profile() -> dict:
-    profile = UserProfile.query.order_by(UserProfile.id.asc()).first()
+def get_or_create_profile(user_id: int | None = None) -> dict:
+    profile = UserProfile.query.filter(UserProfile.user_id == user_id).order_by(UserProfile.id.asc()).first()
 
     if profile:
         return profile.to_dict()
@@ -35,6 +35,7 @@ def get_or_create_profile() -> dict:
     now = datetime.now(timezone.utc)
     profile = UserProfile(
         nickname=DEFAULT_PROFILE["nickname"],
+        user_id=user_id,
         level=DEFAULT_PROFILE["level"],
         focus=DEFAULT_PROFILE["focus"],
         goal=DEFAULT_PROFILE["goal"],
@@ -48,9 +49,9 @@ def get_or_create_profile() -> dict:
     return profile.to_dict()
 
 
-def update_profile(payload: dict) -> dict:
-    get_or_create_profile()
-    profile = UserProfile.query.order_by(UserProfile.id.asc()).first()
+def update_profile(payload: dict, user_id: int | None = None) -> dict:
+    get_or_create_profile(user_id=user_id)
+    profile = UserProfile.query.filter(UserProfile.user_id == user_id).order_by(UserProfile.id.asc()).first()
     assert profile is not None
 
     field_map = {
@@ -72,9 +73,9 @@ def update_profile(payload: dict) -> dict:
     return profile.to_dict()
 
 
-def reset_profile() -> dict:
-    get_or_create_profile()
-    profile = UserProfile.query.order_by(UserProfile.id.asc()).first()
+def reset_profile(user_id: int | None = None) -> dict:
+    get_or_create_profile(user_id=user_id)
+    profile = UserProfile.query.filter(UserProfile.user_id == user_id).order_by(UserProfile.id.asc()).first()
     assert profile is not None
 
     profile.nickname = DEFAULT_PROFILE["nickname"]
@@ -88,17 +89,17 @@ def reset_profile() -> dict:
     return profile.to_dict()
 
 
-def get_profile_for_prompt() -> dict:
-    return get_or_create_profile()
+def get_profile_for_prompt(user_id: int | None = None) -> dict:
+    return get_or_create_profile(user_id=user_id)
 
 
-def build_profile_insights() -> dict:
-    profile = get_or_create_profile()
-    question_count = ConversationHistory.query.count()
-    mistake_count = MistakeRecord.query.count()
+def build_profile_insights(user_id: int | None = None) -> dict:
+    profile = get_or_create_profile(user_id=user_id)
+    question_count = ConversationHistory.query.filter(ConversationHistory.user_id == user_id).count()
+    mistake_count = MistakeRecord.query.filter(MistakeRecord.user_id == user_id).count()
 
-    topic_distribution = _build_topic_distribution()
-    mode_distribution = _build_mode_distribution()
+    topic_distribution = _build_topic_distribution(user_id=user_id)
+    mode_distribution = _build_mode_distribution(user_id=user_id)
     recent_weak_points = [
         {
             "id": record.id,
@@ -106,7 +107,10 @@ def build_profile_insights() -> dict:
             "topic": record.topic,
             "type": record.mistake_type,
         }
-        for record in MistakeRecord.query.order_by(MistakeRecord.created_at.desc()).limit(5).all()
+        for record in MistakeRecord.query.filter(MistakeRecord.user_id == user_id)
+        .order_by(MistakeRecord.created_at.desc())
+        .limit(5)
+        .all()
     ]
 
     return {
@@ -120,13 +124,22 @@ def build_profile_insights() -> dict:
     }
 
 
-def _build_topic_distribution() -> list[dict]:
+def _build_topic_distribution(user_id: int | None = None) -> list[dict]:
     counter: Counter[str] = Counter()
 
-    for topic, count in db.session.query(MistakeRecord.topic, func.count(MistakeRecord.id)).group_by(MistakeRecord.topic):
+    for topic, count in (
+        db.session.query(MistakeRecord.topic, func.count(MistakeRecord.id))
+        .filter(MistakeRecord.user_id == user_id)
+        .group_by(MistakeRecord.topic)
+    ):
         counter[topic or "编程基础"] += count * 2
 
-    for record in ConversationHistory.query.order_by(ConversationHistory.created_at.desc()).limit(80).all():
+    for record in (
+        ConversationHistory.query.filter(ConversationHistory.user_id == user_id)
+        .order_by(ConversationHistory.created_at.desc())
+        .limit(80)
+        .all()
+    ):
         counter[_infer_topic(record.question)] += 1
 
     total = sum(counter.values())
@@ -139,9 +152,10 @@ def _build_topic_distribution() -> list[dict]:
     ]
 
 
-def _build_mode_distribution() -> list[dict]:
+def _build_mode_distribution(user_id: int | None = None) -> list[dict]:
     rows = (
         db.session.query(ConversationHistory.mode_label, func.count(ConversationHistory.id))
+        .filter(ConversationHistory.user_id == user_id)
         .group_by(ConversationHistory.mode_label)
         .all()
     )

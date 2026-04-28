@@ -25,8 +25,8 @@ def rebuild_rag_index() -> dict:
         }
 
 
-def search_rag_documents(question: str) -> list[dict]:
-    return retrieve_documents(question)
+def search_rag_documents(question: str, user_id: int | None = None) -> list[dict]:
+    return retrieve_documents(question, user_id=user_id)
 
 
 def _build_context(documents: list[dict]) -> str:
@@ -77,11 +77,11 @@ def _sources_from_documents(documents: list[dict]) -> list[dict]:
     ]
 
 
-def _build_rag_prompts(question: str) -> tuple[str, str, list[dict]]:
-    documents = retrieve_documents(question)
+def _build_rag_prompts(question: str, user_id: int | None = None) -> tuple[str, str, list[dict]]:
+    documents = retrieve_documents(question, user_id=user_id)
     _log_retrieval(question, documents)
     context = _build_context(documents)
-    profile = get_profile_for_prompt()
+    profile = get_profile_for_prompt(user_id=user_id)
     system_prompt = (
         "你是一个编程教学助手。"
         "请优先依据给定资料片段回答。"
@@ -103,14 +103,14 @@ def _build_rag_prompts(question: str) -> tuple[str, str, list[dict]]:
     return system_prompt, user_prompt, documents
 
 
-def generate_rag_reply(question: str) -> dict:
-    system_prompt, user_prompt, documents = _build_rag_prompts(question)
+def generate_rag_reply(question: str, user_id: int | None = None) -> dict:
+    system_prompt, user_prompt, documents = _build_rag_prompts(question, user_id=user_id)
     reply = generate_reply(system_prompt=system_prompt, user_prompt=user_prompt)
     return {"reply": reply, "sources": _sources_from_documents(documents)}
 
 
-def stream_rag_reply(question: str):
-    system_prompt, user_prompt, documents = _build_rag_prompts(question)
+def stream_rag_reply(question: str, user_id: int | None = None):
+    system_prompt, user_prompt, documents = _build_rag_prompts(question, user_id=user_id)
     return {
         "sources": _sources_from_documents(documents),
         "chunks": stream_reply(system_prompt=system_prompt, user_prompt=user_prompt),

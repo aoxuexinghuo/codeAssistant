@@ -2,8 +2,9 @@ import json
 
 from flask import Blueprint, Response, jsonify, request, stream_with_context
 
+from .services.auth_service import get_user_by_token, login_user, register_user
 from .services.history_service import add_history_entry, clear_history, delete_history_entry, list_history
-from .services.knowledge_service import get_knowledge_item, list_knowledge_items
+from .services.knowledge_service import create_user_knowledge_item, get_knowledge_item, list_knowledge_items
 from .services.llm_service import generate_reply, stream_reply
 from .services.mistake_service import (
     create_mistake_record,
@@ -22,6 +23,39 @@ from .services.rag_service import generate_rag_reply, rebuild_rag_index, search_
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 
 
+def _current_user():
+    return get_user_by_token(request.headers.get("X-User-Token"))
+
+
+def _current_user_id() -> int | None:
+    user = _current_user()
+    return user.id if user else None
+
+
+@api_bp.route("/auth/register", methods=["POST"])
+def register():
+    body = request.get_json(silent=True) or {}
+
+    try:
+        user = register_user(body.get("username", ""), body.get("password", ""))
+    except ValueError as error:
+        return jsonify({"ok": False, "message": str(error)}), 400
+
+    return jsonify({"ok": True, "data": user}), 201
+
+
+@api_bp.route("/auth/login", methods=["POST"])
+def login():
+    body = request.get_json(silent=True) or {}
+
+    try:
+        user = login_user(body.get("username", ""), body.get("password", ""))
+    except ValueError as error:
+        return jsonify({"ok": False, "message": str(error)}), 400
+
+    return jsonify({"ok": True, "data": user})
+
+
 @api_bp.route("/modes", methods=["GET"])
 def get_modes():
     return jsonify({"ok": True, "data": list_modes()})
@@ -29,34 +63,50 @@ def get_modes():
 
 @api_bp.route("/profile", methods=["GET"])
 def get_profile():
-    return jsonify({"ok": True, "data": get_or_create_profile()})
+    return jsonify({"ok": True, "data": get_or_create_profile(user_id=_current_user_id())})
 
 
 @api_bp.route("/profile", methods=["PUT"])
 def save_profile():
     body = request.get_json(silent=True) or {}
-    return jsonify({"ok": True, "data": update_profile(body)})
+    return jsonify({"ok": True, "data": update_profile(body, user_id=_current_user_id())})
 
 
 @api_bp.route("/profile/reset", methods=["POST"])
 def restore_profile():
-    return jsonify({"ok": True, "data": reset_profile()})
+    return jsonify({"ok": True, "data": reset_profile(user_id=_current_user_id())})
 
 
 @api_bp.route("/profile/insights", methods=["GET"])
 def get_profile_insights():
-    return jsonify({"ok": True, "data": build_profile_insights()})
+    return jsonify({"ok": True, "data": build_profile_insights(user_id=_current_user_id())})
 
 
 @api_bp.route("/knowledge", methods=["GET"])
 def get_knowledge():
-    return jsonify({"ok": True, "data": list_knowledge_items()})
+    return jsonify({"ok": True, "data": list_knowledge_items(user_id=_current_user_id())})
+
+
+@api_bp.route("/knowledge", methods=["POST"])
+def upload_knowledge():
+    user = _current_user()
+    if not user:
+        return jsonify({"ok": False, "message": "请先登录后再上传资料"}), 401
+
+    body = request.get_json(silent=True) or {}
+
+    try:
+        item = create_user_knowledge_item(user.id, body)
+    except ValueError as error:
+        return jsonify({"ok": False, "message": str(error)}), 400
+
+    return jsonify({"ok": True, "data": item}), 201
 
 
 @api_bp.route("/knowledge/<path:file_name>", methods=["GET"])
 def get_knowledge_detail(file_name: str):
     try:
-        item = get_knowledge_item(file_name)
+        item = get_knowledge_item(file_name, user_id=_current_user_id())
     except ValueError as error:
         return jsonify({"ok": False, "message": str(error)}), 404
 
@@ -68,7 +118,7 @@ def get_history():
     keyword = request.args.get("q", "").strip()
     mode = request.args.get("mode", "").strip()
     limit = request.args.get("limit", default=50, type=int)
-    return jsonify({"ok": True, "data": list_history(keyword=keyword, mode=mode, limit=limit)})
+    return jsonify({"ok": True, "data": list_history(keyword=keyword, mode=mode, limit=limit, user_id=_current_user_id())})
 
 
 @api_bp.route("/history", methods=["POST"])
@@ -88,6 +138,7 @@ def create_history():
             "modeLabel": mode_label,
             "question": question,
             "reply": reply,
+            "userId": _current_user_id(),
         }
     )
     return jsonify({"ok": True, "data": record}), 201
@@ -95,14 +146,14 @@ def create_history():
 
 @api_bp.route("/history", methods=["DELETE"])
 def remove_history():
-    clear_history()
+    clear_history(user_id=_current_user_id())
     return jsonify({"ok": True, "data": []})
 
 
 @api_bp.route("/history/<int:record_id>", methods=["DELETE"])
 def remove_history_entry(record_id: int):
     try:
-        delete_history_entry(record_id)
+        delete_history_entry(record_id, user_id=_current_user_id())
     except ValueError as error:
         return jsonify({"ok": False, "message": str(error)}), 404
 
@@ -111,7 +162,7 @@ def remove_history_entry(record_id: int):
 
 @api_bp.route("/mistakes", methods=["GET"])
 def get_mistakes():
-    return jsonify({"ok": True, "data": list_mistakes()})
+    return jsonify({"ok": True, "data": list_mistakes(user_id=_current_user_id())})
 
 
 @api_bp.route("/mistakes", methods=["POST"])
@@ -145,6 +196,7 @@ def create_mistake():
                 "userAnswer": user_answer,
                 "referenceAnswer": reference_answer,
                 "note": note,
+                "userId": _current_user_id(),
             }
         )
     except Exception as error:
@@ -172,7 +224,7 @@ def create_mistakes_from_chat():
         return jsonify({"ok": False, "message": "question、reply 字段不能为空"}), 400
 
     try:
-        records = create_mistakes_from_assistant(question=question, reply=reply)
+        records = create_mistakes_from_assistant(question=question, reply=reply, user_id=_current_user_id())
     except Exception as error:
         detail = str(error)
         print("[mistake-extraction] failed", {"question": question, "detail": detail})
@@ -193,7 +245,7 @@ def create_mistakes_from_chat():
 @api_bp.route("/mistakes/<int:record_id>", methods=["DELETE"])
 def remove_mistake(record_id: int):
     try:
-        delete_mistake_record(record_id)
+        delete_mistake_record(record_id, user_id=_current_user_id())
     except ValueError as error:
         return jsonify({"ok": False, "message": str(error)}), 404
 
@@ -205,7 +257,7 @@ def update_mistake(record_id: int):
     body = request.get_json(silent=True) or {}
 
     try:
-        record = update_mistake_record(record_id=record_id, entry=body)
+        record = update_mistake_record(record_id=record_id, entry=body, user_id=_current_user_id())
     except ValueError as error:
         return jsonify({"ok": False, "message": str(error)}), 400
 
@@ -218,7 +270,7 @@ def move_mistake(record_id: int):
     direction = (body.get("direction") or "").strip()
 
     try:
-        records = move_mistake_record(record_id=record_id, direction=direction)
+        records = move_mistake_record(record_id=record_id, direction=direction, user_id=_current_user_id())
     except ValueError as error:
         return jsonify({"ok": False, "message": str(error)}), 400
 
@@ -234,7 +286,7 @@ def reorder_mistakes():
         return jsonify({"ok": False, "message": "orderedIds 必须是数组"}), 400
 
     try:
-        records = reorder_mistake_records([int(item) for item in ordered_ids])
+        records = reorder_mistake_records([int(item) for item in ordered_ids], user_id=_current_user_id())
     except ValueError as error:
         return jsonify({"ok": False, "message": str(error)}), 400
 
@@ -259,7 +311,7 @@ def search_rag():
         return jsonify({"ok": False, "message": "q 参数不能为空"}), 400
 
     try:
-        documents = search_rag_documents(question)
+        documents = search_rag_documents(question, user_id=_current_user_id())
     except Exception as error:
         return jsonify({"ok": False, "message": "知识库检索失败", "detail": str(error)}), 500
 
@@ -275,7 +327,7 @@ def create_rag_reply():
         return jsonify({"ok": False, "message": "question 字段不能为空"}), 400
 
     try:
-        result = generate_rag_reply(question)
+        result = generate_rag_reply(question, user_id=_current_user_id())
     except Exception as error:
         detail = str(error)
         print("[rag] reply failed", {"question": question, "detail": detail})
@@ -294,7 +346,7 @@ def create_rag_reply_stream():
 
     def event_stream():
         try:
-            result = stream_rag_reply(question)
+            result = stream_rag_reply(question, user_id=_current_user_id())
             reply = ""
 
             sources_payload = json.dumps(
@@ -351,7 +403,7 @@ def create_reply():
         return error_response
 
     mode = mode_info["key"]
-    system_prompt, user_prompt = build_prompts(mode, question, profile=get_profile_for_prompt())
+    system_prompt, user_prompt = build_prompts(mode, question, profile=get_profile_for_prompt(user_id=_current_user_id()))
 
     try:
         reply = generate_reply(system_prompt=system_prompt, user_prompt=user_prompt)
@@ -385,7 +437,7 @@ def create_reply_stream():
         return error_response
 
     mode = mode_info["key"]
-    system_prompt, user_prompt = build_prompts(mode, question, profile=get_profile_for_prompt())
+    system_prompt, user_prompt = build_prompts(mode, question, profile=get_profile_for_prompt(user_id=_current_user_id()))
 
     def event_stream():
         try:

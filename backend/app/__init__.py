@@ -19,7 +19,7 @@ def create_app() -> Flask:
         # 仍然需要补齐 CORS 头，避免浏览器拦截。
         response.headers["Access-Control-Allow-Origin"] = "*"
         response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type,X-User-Token"
         return response
 
     @app.route("/api/health", methods=["GET"])
@@ -40,8 +40,10 @@ def create_app() -> Flask:
         from . import models  # noqa: F401
         from .services.mistake_service import seed_sample_mistakes
         from .services.rag_service import rebuild_rag_index
+        from .services.schema_service import ensure_lightweight_migrations
 
         db.create_all()
+        ensure_lightweight_migrations()
         seed_sample_mistakes()
         rebuild_rag_index()
 

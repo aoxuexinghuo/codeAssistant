@@ -4,6 +4,14 @@ export function fetchModes() {
   return apiClient.get('/api/modes')
 }
 
+export function login(payload) {
+  return apiClient.post('/api/auth/login', payload)
+}
+
+export function register(payload) {
+  return apiClient.post('/api/auth/register', payload)
+}
+
 export function fetchProfile() {
   return apiClient.get('/api/profile')
 }
@@ -28,6 +36,10 @@ export function fetchKnowledgeDetail(fileName) {
   return apiClient.get(`/api/knowledge/${encodeURIComponent(fileName)}`)
 }
 
+export function uploadKnowledge(payload) {
+  return apiClient.post('/api/knowledge', payload)
+}
+
 export function fetchReply(payload) {
   return apiClient.post('/api/assistant/reply', payload)
 }
@@ -41,10 +53,12 @@ export async function streamRagReply(payload, handlers = {}) {
 }
 
 async function streamEventReply(url, payload, handlers = {}) {
+  const token = localStorage.getItem('programming-assistant-token') || ''
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { 'X-User-Token': token } : {}),
     },
     body: JSON.stringify(payload),
   })

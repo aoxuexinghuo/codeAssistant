@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AuthFormCard from '../components/auth/AuthFormCard.vue'
 import AuthHero from '../components/auth/AuthHero.vue'
+import { login, register } from '../services/api/assistant'
 
 const route = useRoute()
 const router = useRouter()
@@ -13,13 +14,23 @@ const subtitle = computed(() =>
   isLogin.value ? '继续你的编程学习和答疑记录。' : '开启学习、答疑和薄弱点沉淀。'
 )
 
-function handleSubmit(form) {
+async function handleSubmit(form) {
   if (!isLogin.value && form.password !== form.confirmPassword) {
     window.alert('两次密码不一致，请重新输入。')
     return
   }
 
-  router.push('/home')
+  try {
+    const user = isLogin.value
+      ? await login({ username: form.username, password: form.password })
+      : await register({ username: form.username, password: form.password })
+
+    localStorage.setItem('programming-assistant-token', user.token)
+    localStorage.setItem('programming-assistant-user', JSON.stringify(user))
+    router.push('/home')
+  } catch (error) {
+    window.alert(error.message)
+  }
 }
 
 function switchMode() {

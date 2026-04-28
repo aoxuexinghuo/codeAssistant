@@ -1,10 +1,29 @@
 from .extensions import db
 
 
+class User(db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), nullable=False, unique=True, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    token = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "username": self.username,
+            "token": self.token,
+            "createdAt": self.created_at.isoformat(),
+        }
+
+
 class UserProfile(db.Model):
     __tablename__ = "user_profile"
 
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
     nickname = db.Column(db.String(80), nullable=False, default="学习者")
     level = db.Column(db.String(40), nullable=False, default="初级")
     focus = db.Column(db.String(80), nullable=False, default="C语言")
@@ -32,6 +51,7 @@ class ConversationHistory(db.Model):
     __tablename__ = "conversation_history"
 
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
     mode = db.Column(db.String(32), nullable=False, index=True)
     mode_label = db.Column(db.String(64), nullable=False)
     question = db.Column(db.Text, nullable=False)
@@ -53,6 +73,7 @@ class MistakeRecord(db.Model):
     __tablename__ = "mistake_records"
 
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
     topic = db.Column(db.String(64), nullable=False, index=True)
     mode = db.Column(db.String(32), nullable=False, index=True)
     question = db.Column(db.Text, nullable=False)

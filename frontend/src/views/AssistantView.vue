@@ -276,6 +276,8 @@ function reuseQuestion(savedQuestion) {
 }
 
 function logout() {
+  localStorage.removeItem('programming-assistant-token')
+  localStorage.removeItem('programming-assistant-user')
   router.push('/auth/login')
 }
 

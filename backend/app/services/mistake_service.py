@@ -235,8 +235,12 @@ def _classify_full_record(question: str, user_answer: str, reference_answer: str
     return _normalize_analysis(_extract_json(raw_reply))
 
 
-def list_mistakes() -> list[dict]:
-    records = MistakeRecord.query.order_by(MistakeRecord.sort_order.asc(), MistakeRecord.created_at.desc()).all()
+def list_mistakes(user_id: int | None = None) -> list[dict]:
+    records = (
+        MistakeRecord.query.filter(MistakeRecord.user_id == user_id)
+        .order_by(MistakeRecord.sort_order.asc(), MistakeRecord.created_at.desc())
+        .all()
+    )
     return [record.to_dict() for record in records]
 
 
@@ -260,10 +264,14 @@ def create_mistake_record(entry: dict) -> dict:
         stored_user_answer = user_answer
         stored_reference_answer = reference_answer or analysis["summary"]
 
-    max_sort_order = db.session.query(func.max(MistakeRecord.sort_order)).scalar() or 0
+    user_id = entry.get("userId")
+    max_sort_order = (
+        db.session.query(func.max(MistakeRecord.sort_order)).filter(MistakeRecord.user_id == user_id).scalar() or 0
+    )
     now = datetime.now(timezone.utc)
 
     record = MistakeRecord(
+        user_id=entry.get("userId"),
         topic=topic,
         mode=entry.get("mode") or "general",
         question=question,
@@ -281,7 +289,7 @@ def create_mistake_record(entry: dict) -> dict:
     return record.to_dict()
 
 
-def create_mistakes_from_assistant(question: str, reply: str) -> list[dict]:
+def create_mistakes_from_assistant(question: str, reply: str, user_id: int | None = None) -> list[dict]:
     system_prompt, user_prompt = _build_gap_extraction_prompts(question=question, reply=reply)
     raw_reply = ""
 
@@ -308,7 +316,9 @@ def create_mistakes_from_assistant(question: str, reply: str) -> list[dict]:
     if not raw_items:
         return []
 
-    max_sort_order = db.session.query(func.max(MistakeRecord.sort_order)).scalar() or 0
+    max_sort_order = (
+        db.session.query(func.max(MistakeRecord.sort_order)).filter(MistakeRecord.user_id == user_id).scalar() or 0
+    )
     now = datetime.now(timezone.utc)
     records: list[MistakeRecord] = []
 
@@ -326,6 +336,7 @@ def create_mistakes_from_assistant(question: str, reply: str) -> list[dict]:
 
         records.append(
             MistakeRecord(
+                user_id=user_id,
                 topic=topic,
                 mode="general",
                 question=title,
@@ -348,19 +359,19 @@ def create_mistakes_from_assistant(question: str, reply: str) -> list[dict]:
     return [record.to_dict() for record in records]
 
 
-def delete_mistake_record(record_id: int) -> None:
-    record = db.session.get(MistakeRecord, record_id)
+def delete_mistake_record(record_id: int, user_id: int | None = None) -> None:
+    record = MistakeRecord.query.filter_by(id=record_id, user_id=user_id).first()
 
     if not record:
         raise ValueError("知识点记录不存在")
 
     db.session.delete(record)
     db.session.commit()
-    _normalize_sort_order()
+    _normalize_sort_order(user_id=user_id)
 
 
-def update_mistake_record(record_id: int, entry: dict) -> dict:
-    record = db.session.get(MistakeRecord, record_id)
+def update_mistake_record(record_id: int, entry: dict, user_id: int | None = None) -> dict:
+    record = MistakeRecord.query.filter_by(id=record_id, user_id=user_id).first()
 
     if not record:
         raise ValueError("知识点记录不存在")
@@ -385,8 +396,8 @@ def update_mistake_record(record_id: int, entry: dict) -> dict:
     return record.to_dict()
 
 
-def move_mistake_record(record_id: int, direction: str) -> list[dict]:
-    record = db.session.get(MistakeRecord, record_id)
+def move_mistake_record(record_id: int, direction: str, user_id: int | None = None) -> list[dict]:
+    record = MistakeRecord.query.filter_by(id=record_id, user_id=user_id).first()
 
     if not record:
         raise ValueError("知识点记录不存在")
@@ -397,32 +408,34 @@ def move_mistake_record(record_id: int, direction: str) -> list[dict]:
     if direction == "up":
         neighbor = (
             MistakeRecord.query.filter(MistakeRecord.sort_order < record.sort_order)
+            .filter(MistakeRecord.user_id == user_id)
             .order_by(MistakeRecord.sort_order.desc())
             .first()
         )
     else:
         neighbor = (
             MistakeRecord.query.filter(MistakeRecord.sort_order > record.sort_order)
+            .filter(MistakeRecord.user_id == user_id)
             .order_by(MistakeRecord.sort_order.asc())
             .first()
         )
 
     if not neighbor:
-        return list_mistakes()
+        return list_mistakes(user_id=user_id)
 
     record.sort_order, neighbor.sort_order = neighbor.sort_order, record.sort_order
     now = datetime.now(timezone.utc)
     record.updated_at = now
     neighbor.updated_at = now
     db.session.commit()
-    return list_mistakes()
+    return list_mistakes(user_id=user_id)
 
 
-def reorder_mistake_records(ordered_ids: list[int]) -> list[dict]:
+def reorder_mistake_records(ordered_ids: list[int], user_id: int | None = None) -> list[dict]:
     if not ordered_ids:
         raise ValueError("orderedIds 不能为空")
 
-    records = MistakeRecord.query.filter(MistakeRecord.id.in_(ordered_ids)).all()
+    records = MistakeRecord.query.filter(MistakeRecord.id.in_(ordered_ids), MistakeRecord.user_id == user_id).all()
 
     if len(records) != len(set(ordered_ids)):
         raise ValueError("orderedIds 中包含无效记录")
@@ -436,11 +449,15 @@ def reorder_mistake_records(ordered_ids: list[int]) -> list[dict]:
         record.updated_at = now
 
     db.session.commit()
-    return list_mistakes()
+    return list_mistakes(user_id=user_id)
 
 
-def _normalize_sort_order() -> None:
-    records = MistakeRecord.query.order_by(MistakeRecord.sort_order.asc(), MistakeRecord.id.asc()).all()
+def _normalize_sort_order(user_id: int | None = None) -> None:
+    records = (
+        MistakeRecord.query.filter(MistakeRecord.user_id == user_id)
+        .order_by(MistakeRecord.sort_order.asc(), MistakeRecord.id.asc())
+        .all()
+    )
 
     for index, record in enumerate(records, start=1):
         record.sort_order = index

@@ -1,7 +1,9 @@
 async function request(url, options = {}) {
+  const token = localStorage.getItem('programming-assistant-token') || ''
   const response = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { 'X-User-Token': token } : {}),
       ...(options.headers || {}),
     },
     ...options,

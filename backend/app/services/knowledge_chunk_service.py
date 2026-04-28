@@ -41,26 +41,33 @@ def split_text(text: str) -> list[str]:
     return [chunk for chunk in chunks if chunk]
 
 
-def load_knowledge_chunks() -> list[dict]:
+def load_knowledge_chunks(user_id: int | None = None) -> list[dict]:
     documents: list[dict] = []
 
-    for file_path in sorted(settings.knowledge_dir.glob("*.md")):
-        raw_content = file_path.read_text(encoding="utf-8")
-        metadata, content = parse_markdown_document(raw_content)
-        title = metadata.get("title") or title_from_markdown(file_path, content)
+    knowledge_dirs = [settings.knowledge_dir]
+    if user_id is not None:
+        user_dir = settings.user_knowledge_dir / f"user_{user_id}"
+        user_dir.mkdir(parents=True, exist_ok=True)
+        knowledge_dirs.append(user_dir)
 
-        for index, chunk in enumerate(split_text(content), start=1):
-            documents.append(
-                {
-                    "id": f"{file_path.name}#{index}",
-                    "title": title,
-                    "file": file_path.name,
-                    "chunkIndex": index,
-                    "content": chunk,
-                    "topic": metadata.get("topic") or "",
-                    "level": metadata.get("level") or "",
-                    "tags": metadata.get("tags") or [],
-                }
-            )
+    for knowledge_dir in knowledge_dirs:
+        for file_path in sorted(knowledge_dir.glob("*.md")):
+            raw_content = file_path.read_text(encoding="utf-8")
+            metadata, content = parse_markdown_document(raw_content)
+            title = metadata.get("title") or title_from_markdown(file_path, content)
+
+            for index, chunk in enumerate(split_text(content), start=1):
+                documents.append(
+                    {
+                        "id": f"{file_path.name}#{index}",
+                        "title": title,
+                        "file": file_path.name,
+                        "chunkIndex": index,
+                        "content": chunk,
+                        "topic": metadata.get("topic") or "",
+                        "level": metadata.get("level") or "",
+                        "tags": metadata.get("tags") or [],
+                    }
+                )
 
     return documents

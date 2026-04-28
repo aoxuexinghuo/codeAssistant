@@ -6,8 +6,8 @@ from ..extensions import db
 from ..models import ConversationHistory
 
 
-def list_history(keyword: str = "", mode: str = "", limit: int = 50) -> list[dict]:
-    query = ConversationHistory.query
+def list_history(keyword: str = "", mode: str = "", limit: int = 50, user_id: int | None = None) -> list[dict]:
+    query = ConversationHistory.query.filter(ConversationHistory.user_id == user_id)
 
     if mode:
         query = query.filter(ConversationHistory.mode == mode)
@@ -31,6 +31,7 @@ def list_history(keyword: str = "", mode: str = "", limit: int = 50) -> list[dic
 
 def add_history_entry(entry: dict) -> dict:
     record = ConversationHistory(
+        user_id=entry.get("userId"),
         mode=entry["mode"],
         mode_label=entry["modeLabel"],
         question=entry["question"],
@@ -42,13 +43,13 @@ def add_history_entry(entry: dict) -> dict:
     return record.to_dict()
 
 
-def clear_history() -> None:
-    ConversationHistory.query.delete()
+def clear_history(user_id: int | None = None) -> None:
+    ConversationHistory.query.filter(ConversationHistory.user_id == user_id).delete()
     db.session.commit()
 
 
-def delete_history_entry(record_id: int) -> None:
-    record = db.session.get(ConversationHistory, record_id)
+def delete_history_entry(record_id: int, user_id: int | None = None) -> None:
+    record = ConversationHistory.query.filter_by(id=record_id, user_id=user_id).first()
 
     if not record:
         raise ValueError("历史会话不存在")

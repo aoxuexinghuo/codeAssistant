@@ -7,8 +7,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
+USER_KNOWLEDGE_DIR = BASE_DIR / "user_knowledge"
 VECTOR_DIR = BASE_DIR / "vector_store"
 KNOWLEDGE_DIR.mkdir(parents=True, exist_ok=True)
+USER_KNOWLEDGE_DIR.mkdir(parents=True, exist_ok=True)
 VECTOR_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -26,6 +28,7 @@ class Settings:
     llm_temperature: float = float(os.getenv("LLM_TEMPERATURE", "0.7"))
     llm_max_tokens: int = int(os.getenv("LLM_MAX_TOKENS", "1200"))
     knowledge_dir: Path = KNOWLEDGE_DIR
+    user_knowledge_dir: Path = USER_KNOWLEDGE_DIR
     rag_index_path: Path = DATA_DIR / "rag_index.json"
     vector_store_dir: Path = VECTOR_DIR
     rag_retriever_type: str = os.getenv("RAG_RETRIEVER_TYPE", "vector")

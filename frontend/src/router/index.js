@@ -3,6 +3,7 @@ import AppShell from '../components/layout/AppShell.vue'
 import AuthView from '../views/AuthView.vue'
 import AssistantView from '../views/AssistantView.vue'
 import HomeView from '../views/HomeView.vue'
+import KnowledgeUploadView from '../views/KnowledgeUploadView.vue'
 import LearningDetailView from '../views/LearningDetailView.vue'
 import LearningCenterView from '../views/LearningCenterView.vue'
 import MistakesView from '../views/MistakesView.vue'
@@ -31,6 +32,11 @@ const routes = [
         path: 'learning',
         name: 'learning',
         component: LearningCenterView,
+      },
+      {
+        path: 'learning/upload',
+        name: 'learning-upload',
+        component: KnowledgeUploadView,
       },
       {
         path: 'learning/:slug',
