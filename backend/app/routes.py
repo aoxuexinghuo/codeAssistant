@@ -16,6 +16,7 @@ from .services.mistake_service import (
 )
 from .services.mode_service import build_fallback_reply, get_mode_by_key, list_modes
 from .services.prompt_service import build_prompts
+from .services.profile_service import build_profile_insights, get_or_create_profile, get_profile_for_prompt, reset_profile, update_profile
 from .services.rag_service import generate_rag_reply, rebuild_rag_index, search_rag_documents, stream_rag_reply
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
@@ -24,6 +25,27 @@ api_bp = Blueprint("api", __name__, url_prefix="/api")
 @api_bp.route("/modes", methods=["GET"])
 def get_modes():
     return jsonify({"ok": True, "data": list_modes()})
+
+
+@api_bp.route("/profile", methods=["GET"])
+def get_profile():
+    return jsonify({"ok": True, "data": get_or_create_profile()})
+
+
+@api_bp.route("/profile", methods=["PUT"])
+def save_profile():
+    body = request.get_json(silent=True) or {}
+    return jsonify({"ok": True, "data": update_profile(body)})
+
+
+@api_bp.route("/profile/reset", methods=["POST"])
+def restore_profile():
+    return jsonify({"ok": True, "data": reset_profile()})
+
+
+@api_bp.route("/profile/insights", methods=["GET"])
+def get_profile_insights():
+    return jsonify({"ok": True, "data": build_profile_insights()})
 
 
 @api_bp.route("/knowledge", methods=["GET"])
@@ -329,7 +351,7 @@ def create_reply():
         return error_response
 
     mode = mode_info["key"]
-    system_prompt, user_prompt = build_prompts(mode, question)
+    system_prompt, user_prompt = build_prompts(mode, question, profile=get_profile_for_prompt())
 
     try:
         reply = generate_reply(system_prompt=system_prompt, user_prompt=user_prompt)
@@ -363,7 +385,7 @@ def create_reply_stream():
         return error_response
 
     mode = mode_info["key"]
-    system_prompt, user_prompt = build_prompts(mode, question)
+    system_prompt, user_prompt = build_prompts(mode, question, profile=get_profile_for_prompt())
 
     def event_stream():
         try:

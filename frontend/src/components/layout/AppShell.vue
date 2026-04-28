@@ -3,6 +3,7 @@ const navItems = [
   { label: '首页', short: '首', to: '/home' },
   { label: '学习中心', short: '学', to: '/learning' },
   { label: '薄弱点', short: '错', to: '/mistakes' },
+  { label: '学习档案', short: '档', to: '/profile' },
   { label: '智能答疑', short: '答', to: '/assistant' },
 ]
 </script>

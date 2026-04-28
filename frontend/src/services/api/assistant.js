@@ -4,6 +4,22 @@ export function fetchModes() {
   return apiClient.get('/api/modes')
 }
 
+export function fetchProfile() {
+  return apiClient.get('/api/profile')
+}
+
+export function updateProfile(payload) {
+  return apiClient.put('/api/profile', payload)
+}
+
+export function resetProfile() {
+  return apiClient.post('/api/profile/reset', {})
+}
+
+export function fetchProfileInsights() {
+  return apiClient.get('/api/profile/insights')
+}
+
 export function fetchKnowledgeList() {
   return apiClient.get('/api/knowledge')
 }

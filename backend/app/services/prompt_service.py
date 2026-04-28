@@ -41,14 +41,42 @@ _mode_prompts = {
 }
 
 
-def build_prompts(mode: str, question: str) -> tuple[str, str]:
+def build_prompts(mode: str, question: str, profile: dict | None = None) -> tuple[str, str]:
     system_prompt = _mode_prompts.get(mode, _mode_prompts["learning"])
     cleaned_question = question.strip()
+    profile_lines = _build_profile_lines(profile)
     user_prompt = "\n".join(
         [
             "请按当前模式回答，并严格保持简洁。",
             "如果用户没有明确要求详细解释或完整代码，不要展开成长篇内容。",
+            profile_lines,
             f"用户问题：{cleaned_question}" if cleaned_question else "用户问题：请围绕该主题给出简洁、教学向的回答。",
         ]
     )
     return system_prompt, user_prompt
+
+
+def _build_profile_lines(profile: dict | None) -> str:
+    if not profile:
+        return "用户画像：暂无。"
+
+    answer_style = profile.get("answerStyle") or "简洁直接"
+    style_rule = "回答风格：先给结论，保持简洁。"
+
+    if "举例" in answer_style:
+        style_rule = "回答风格：给一个最小例子，但不要展开成长篇教程。"
+    elif "引导" in answer_style:
+        style_rule = "回答风格：多给提示和思考方向，少直接替用户完成。"
+    elif "代码" in answer_style:
+        style_rule = "回答风格：少给完整代码，优先讲思路和关键点。"
+
+    return "\n".join(
+        [
+            "用户画像：",
+            f"- 编程水平：{profile.get('level') or '初级'}",
+            f"- 学习方向：{profile.get('focus') or '未指定'}",
+            f"- 学习目标：{profile.get('goal') or '课程学习'}",
+            f"- 回答偏好：{answer_style}",
+            style_rule,
+        ]
+    )

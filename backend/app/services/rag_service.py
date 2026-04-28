@@ -1,4 +1,5 @@
 from .llm_service import generate_reply, stream_reply
+from .profile_service import get_profile_for_prompt
 from .retriever_service import rebuild_index, retrieve_documents
 
 
@@ -80,12 +81,14 @@ def _build_rag_prompts(question: str) -> tuple[str, str, list[dict]]:
     documents = retrieve_documents(question)
     _log_retrieval(question, documents)
     context = _build_context(documents)
+    profile = get_profile_for_prompt()
     system_prompt = (
         "你是一个编程教学助手。"
         "请优先依据给定资料片段回答。"
         "如果资料中没有直接依据，先说明资料库没有找到直接依据，再给出简短通用解释。"
         "回答控制在 150 字以内。"
         "不要编造资料来源。"
+        f"用户水平是{profile.get('level')}，学习方向是{profile.get('focus')}，回答偏好是{profile.get('answerStyle')}。"
     )
     user_prompt = "\n".join(
         [

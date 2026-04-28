@@ -11,6 +11,7 @@ import {
   deleteHistoryEntry,
   fetchHistory,
   fetchModes,
+  fetchProfile,
   fetchRagSearch,
   streamRagReply,
   streamReply,
@@ -28,6 +29,8 @@ const historyLoading = ref(true)
 const clearingHistory = ref(false)
 const deletingHistoryId = ref(null)
 const historyVisible = ref(false)
+const profile = ref(null)
+const profileLoading = ref(false)
 const historyKeyword = ref('')
 const historyModeFilter = ref('')
 const errorMessage = ref('')
@@ -93,6 +96,20 @@ async function loadHistory() {
     errorMessage.value = error.message
   } finally {
     historyLoading.value = false
+  }
+}
+
+async function loadProfile() {
+  profileLoading.value = true
+
+  try {
+    const profileData = await fetchProfile()
+    profile.value = profileData
+    autoExtractEnabled.value = profileData.weakPreference !== '手动记录'
+  } catch (error) {
+    errorMessage.value = error.message
+  } finally {
+    profileLoading.value = false
   }
 }
 
@@ -271,6 +288,7 @@ watch(historyModeFilter, () => {
 onMounted(() => {
   loadModes()
   loadHistory()
+  loadProfile()
 })
 </script>
 

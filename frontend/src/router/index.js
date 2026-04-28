@@ -6,6 +6,7 @@ import HomeView from '../views/HomeView.vue'
 import LearningDetailView from '../views/LearningDetailView.vue'
 import LearningCenterView from '../views/LearningCenterView.vue'
 import MistakesView from '../views/MistakesView.vue'
+import ProfileView from '../views/ProfileView.vue'
 
 const routes = [
   {
@@ -40,6 +41,11 @@ const routes = [
         path: 'mistakes',
         name: 'mistakes',
         component: MistakesView,
+      },
+      {
+        path: 'profile',
+        name: 'profile',
+        component: ProfileView,
       },
       {
         path: 'assistant',

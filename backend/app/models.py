@@ -1,6 +1,33 @@
 from .extensions import db
 
 
+class UserProfile(db.Model):
+    __tablename__ = "user_profile"
+
+    id = db.Column(db.Integer, primary_key=True)
+    nickname = db.Column(db.String(80), nullable=False, default="学习者")
+    level = db.Column(db.String(40), nullable=False, default="初级")
+    focus = db.Column(db.String(80), nullable=False, default="C语言")
+    goal = db.Column(db.String(80), nullable=False, default="课程学习")
+    answer_style = db.Column(db.String(80), nullable=False, default="简洁直接")
+    weak_preference = db.Column(db.String(80), nullable=False, default="自动记录")
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "nickname": self.nickname,
+            "level": self.level,
+            "focus": self.focus,
+            "goal": self.goal,
+            "answerStyle": self.answer_style,
+            "weakPreference": self.weak_preference,
+            "createdAt": self.created_at.isoformat(),
+            "updatedAt": self.updated_at.isoformat(),
+        }
+
+
 class ConversationHistory(db.Model):
     __tablename__ = "conversation_history"
 
