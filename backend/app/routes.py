@@ -19,6 +19,7 @@ from .services.mode_service import build_fallback_reply, get_mode_by_key, list_m
 from .services.prompt_service import build_prompts
 from .services.profile_service import build_profile_insights, get_or_create_profile, get_profile_for_prompt, reset_profile, update_profile
 from .services.rag_service import generate_rag_reply, rebuild_rag_index, search_rag_documents, stream_rag_reply
+from .services.study_plan_service import delete_study_plan, generate_study_plan, list_study_plans, update_study_plan_step
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -111,6 +112,56 @@ def get_knowledge_detail(file_name: str):
         return jsonify({"ok": False, "message": str(error)}), 404
 
     return jsonify({"ok": True, "data": item})
+
+
+@api_bp.route("/study-plans", methods=["GET"])
+def get_study_plans():
+    return jsonify({"ok": True, "data": list_study_plans(user_id=_current_user_id())})
+
+
+@api_bp.route("/study-plans/generate", methods=["POST"])
+def create_study_plan():
+    body = request.get_json(silent=True) or {}
+    resource_files = body.get("resourceFiles")
+
+    if not isinstance(resource_files, list):
+        return jsonify({"ok": False, "message": "resourceFiles 必须是数组"}), 400
+
+    try:
+        plan = generate_study_plan(resource_files=resource_files, user_id=_current_user_id())
+    except ValueError as error:
+        return jsonify({"ok": False, "message": str(error)}), 400
+    except Exception as error:
+        return jsonify({"ok": False, "message": "学习计划生成失败", "detail": str(error)}), 502
+
+    return jsonify({"ok": True, "data": plan}), 201
+
+
+@api_bp.route("/study-plans/<int:plan_id>", methods=["DELETE"])
+def remove_study_plan(plan_id: int):
+    try:
+        delete_study_plan(plan_id=plan_id, user_id=_current_user_id())
+    except ValueError as error:
+        return jsonify({"ok": False, "message": str(error)}), 404
+
+    return jsonify({"ok": True, "data": []})
+
+
+@api_bp.route("/study-plans/<int:plan_id>/steps/<int:step_index>", methods=["PUT"])
+def save_study_plan_step(plan_id: int, step_index: int):
+    body = request.get_json(silent=True) or {}
+
+    try:
+        plan = update_study_plan_step(
+            plan_id=plan_id,
+            step_index=step_index,
+            completed=bool(body.get("completed", False)),
+            user_id=_current_user_id(),
+        )
+    except ValueError as error:
+        return jsonify({"ok": False, "message": str(error)}), 404
+
+    return jsonify({"ok": True, "data": plan})
 
 
 @api_bp.route("/history", methods=["GET"])

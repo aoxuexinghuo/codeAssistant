@@ -101,3 +101,36 @@ class MistakeRecord(db.Model):
             "createdAt": self.created_at.isoformat(),
             "updatedAt": self.updated_at.isoformat(),
         }
+
+
+class StudyPlan(db.Model):
+    __tablename__ = "study_plans"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+    title = db.Column(db.String(120), nullable=False)
+    goal = db.Column(db.Text, nullable=False)
+    duration = db.Column(db.String(40), nullable=False)
+    resource_files = db.Column(db.Text, nullable=False)
+    plan_json = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, index=True)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    def to_dict(self) -> dict:
+        import json
+
+        try:
+            plan = json.loads(self.plan_json)
+        except json.JSONDecodeError:
+            plan = {}
+
+        return {
+            "id": self.id,
+            "title": self.title,
+            "goal": self.goal,
+            "duration": self.duration,
+            "resourceFiles": json.loads(self.resource_files),
+            "plan": plan,
+            "createdAt": self.created_at.isoformat(),
+            "updatedAt": self.updated_at.isoformat(),
+        }

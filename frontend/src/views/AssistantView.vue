@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import AssistantHeader from '../components/assistant/AssistantHeader.vue'
 import HistoryDrawer from '../components/assistant/HistoryDrawer.vue'
 import QuestionAnswerPanel from '../components/assistant/QuestionAnswerPanel.vue'
+import { clearPageStates, loadPageState, savePageState } from '../services/pageState'
 import {
   clearHistory,
   createHistoryEntry,
@@ -18,11 +19,20 @@ import {
 } from '../services/api/assistant'
 
 const router = useRouter()
+const savedState = loadPageState('assistant', {
+  activeMode: '',
+  question: '',
+  answer: '等待你的提问。',
+  autoExtractEnabled: true,
+  ragEnabled: false,
+  historyKeyword: '',
+  historyModeFilter: '',
+})
 const modes = ref([])
 const historyItems = ref([])
-const activeMode = ref('')
-const question = ref('')
-const answer = ref('等待你的提问。')
+const activeMode = ref(savedState.activeMode)
+const question = ref(savedState.question)
+const answer = ref(savedState.answer)
 const loading = ref(false)
 const modeLoading = ref(true)
 const historyLoading = ref(true)
@@ -31,11 +41,11 @@ const deletingHistoryId = ref(null)
 const historyVisible = ref(false)
 const profile = ref(null)
 const profileLoading = ref(false)
-const historyKeyword = ref('')
-const historyModeFilter = ref('')
+const historyKeyword = ref(savedState.historyKeyword)
+const historyModeFilter = ref(savedState.historyModeFilter)
 const errorMessage = ref('')
-const autoExtractEnabled = ref(true)
-const ragEnabled = ref(false)
+const autoExtractEnabled = ref(savedState.autoExtractEnabled)
+const ragEnabled = ref(savedState.ragEnabled)
 const ragSources = ref([])
 const ragHits = ref([])
 const extractionMessage = ref('')
@@ -75,7 +85,7 @@ async function loadModes() {
   try {
     const data = await fetchModes()
     modes.value = data
-    activeMode.value = data[0]?.key || ''
+    activeMode.value = data.some((mode) => mode.key === activeMode.value) ? activeMode.value : data[0]?.key || ''
   } catch (error) {
     errorMessage.value = error.message
   } finally {
@@ -276,6 +286,7 @@ function reuseQuestion(savedQuestion) {
 }
 
 function logout() {
+  clearPageStates()
   localStorage.removeItem('programming-assistant-token')
   localStorage.removeItem('programming-assistant-user')
   router.push('/auth/login')
@@ -286,6 +297,22 @@ watch(historyModeFilter, () => {
     loadHistory()
   }
 })
+
+watch(
+  [activeMode, question, answer, autoExtractEnabled, ragEnabled, historyKeyword, historyModeFilter],
+  () => {
+    savePageState('assistant', {
+      activeMode: activeMode.value,
+      question: question.value,
+      answer: answer.value,
+      autoExtractEnabled: autoExtractEnabled.value,
+      ragEnabled: ragEnabled.value,
+      historyKeyword: historyKeyword.value,
+      historyModeFilter: historyModeFilter.value,
+    })
+  },
+  { deep: true }
+)
 
 onMounted(() => {
   loadModes()

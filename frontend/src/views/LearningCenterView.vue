@@ -1,11 +1,19 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { fetchKnowledgeList } from '../services/api/assistant'
+import { computed, onMounted, ref, watch } from 'vue'
+import { fetchKnowledgeList, generateStudyPlan } from '../services/api/assistant'
+import { loadPageState, savePageState } from '../services/pageState'
 
+const savedState = loadPageState('learning-center', {
+  activeTopic: '',
+  selectedFiles: [],
+})
 const items = ref([])
 const loading = ref(true)
+const generatingPlan = ref(false)
 const errorMessage = ref('')
-const activeTopic = ref('')
+const successMessage = ref('')
+const activeTopic = ref(savedState.activeTopic)
+const selectedFiles = ref(savedState.selectedFiles)
 
 const topics = computed(() => [...new Set(items.value.map((item) => item.topic).filter(Boolean))])
 const filteredItems = computed(() =>
@@ -41,8 +49,40 @@ async function loadKnowledge() {
   }
 }
 
+function toggleSelected(file) {
+  if (selectedFiles.value.includes(file)) {
+    selectedFiles.value = selectedFiles.value.filter((item) => item !== file)
+    return
+  }
+
+  selectedFiles.value = [...selectedFiles.value, file]
+}
+
+async function handleGeneratePlan() {
+  generatingPlan.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  try {
+    await generateStudyPlan(selectedFiles.value)
+    selectedFiles.value = []
+    successMessage.value = '学习计划已生成，可在学习档案中查看。'
+  } catch (error) {
+    errorMessage.value = error.message
+  } finally {
+    generatingPlan.value = false
+  }
+}
+
 onMounted(() => {
   loadKnowledge()
+})
+
+watch([activeTopic, selectedFiles], () => {
+  savePageState('learning-center', {
+    activeTopic: activeTopic.value,
+    selectedFiles: selectedFiles.value,
+  })
 })
 </script>
 
@@ -73,7 +113,16 @@ onMounted(() => {
       </button>
     </section>
 
+    <section v-if="selectedFiles.length" class="selection-action-bar">
+      <span>已选择 {{ selectedFiles.length }} 项资料</span>
+      <button class="ghost-btn" type="button" @click="selectedFiles = []">清空</button>
+      <button class="primary-btn" type="button" :disabled="generatingPlan" @click="handleGeneratePlan">
+        {{ generatingPlan ? '生成中...' : '生成学习计划' }}
+      </button>
+    </section>
+
     <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
+    <p v-if="successMessage" class="success-toast">{{ successMessage }}</p>
 
     <div v-if="loading" class="history-empty">
       <p>正在加载资料...</p>
@@ -85,7 +134,16 @@ onMounted(() => {
         :key="item.file"
         :to="`/learning/${encodeURIComponent(item.file)}`"
         class="topic-card interactive-card"
+        :class="{ selected: selectedFiles.includes(item.file) }"
       >
+        <button
+          class="select-resource-btn"
+          type="button"
+          :aria-label="selectedFiles.includes(item.file) ? '取消选择资料' : '选择资料'"
+          @click.prevent="toggleSelected(item.file)"
+        >
+          {{ selectedFiles.includes(item.file) ? '✓' : '+' }}
+        </button>
         <div class="topic-initial">{{ initialOf(item.topic) }}</div>
         <div class="topic-content">
           <div class="topic-card-head">

@@ -119,8 +119,12 @@ def _build_gap_extraction_prompts(question: str, reply: str):
         "JSON 格式必须是："
         '{"items":[{"topic":"","question":"","summary":"","mistakeType":"","mistakeReason":"","improvementSuggestion":""}]}。'
         "最多返回 2 条。"
+        "question 字段必须是知识点标题，不要直接照抄用户原问题。"
+        "summary 必须给出具体结论，不能写“需要继续梳理”“本轮提问暴露”等空泛话。"
+        "mistakeReason 必须指出具体混淆点。"
+        "improvementSuggestion 必须给出一个可执行的小练习。"
         "mistakeType 只能使用英文值：concept、logic、boundary、syntax、expression、debugging。"
-        "如果只是寒暄、无明确编程知识点，返回 {\"items\":[]}。"
+        "如果只是寒暄、问题过于宽泛或无法提取出具体知识点，返回 {\"items\":[]}。"
     )
     user_prompt = (
         "请从下面问答中提取薄弱知识点，并严格返回 JSON。\n"
@@ -187,9 +191,89 @@ def _build_fallback_summary(question: str, reply: str) -> str:
     return f"需要继续梳理 {topic} 中“{cleaned_question}”这个知识点的核心概念、常见写法和使用场景。"
 
 
+def _build_rule_based_gap_item(question: str, reply: str) -> dict | None:
+    text = f"{question} {reply}".lower()
+
+    if "结构体" in text or "struct" in text:
+        return {
+            "topic": "C语言",
+            "question": "结构体定义与成员访问",
+            "summary": "结构体用于把多个字段组织成一个自定义类型；普通结构体变量用 . 访问成员，结构体指针用 -> 访问成员。",
+            "mistakeType": "concept",
+            "mistakeReason": "容易只记住 struct 的写法，却没有区分结构体变量和结构体指针这两种访问场景。",
+            "improvementSuggestion": "写一个 Student 结构体，分别用变量 s 和指针 p 访问 name、age，对比 . 和 ->。",
+        }
+
+    if "指针" in text or "int *" in text or "int*" in text or "解引用" in text or "地址" in text:
+        return {
+            "topic": "C语言",
+            "question": "指针变量、地址与解引用",
+            "summary": "指针变量保存的是地址，不是普通整数值；通过 *p 解引用时，才是在访问这个地址指向的数据。",
+            "mistakeType": "concept",
+            "mistakeReason": "容易把指针变量本身、变量地址、地址里的值混成同一个概念。",
+            "improvementSuggestion": "画出 int a = 10; int *p = &a; 的内存关系，并标注 a、&a、p、*p 分别表示什么。",
+        }
+
+    if "ref" in text or "reactive" in text or "响应式" in text:
+        return {
+            "topic": "Vue 3",
+            "question": "ref 与 reactive 的使用边界",
+            "summary": "ref 更适合基本类型或需要整体替换的值，reactive 更适合对象状态；解构 reactive 对象时要注意响应式丢失。",
+            "mistakeType": "boundary",
+            "mistakeReason": "容易把响应式 API 当成等价写法，没有先判断数据形态和后续更新方式。",
+            "improvementSuggestion": "分别用 ref 和 reactive 写一个计数器与表单对象，再尝试解构 reactive 观察变化。",
+        }
+
+    if "props" in text or "emit" in text or "组件通信" in text or "v-model" in text:
+        return {
+            "topic": "Vue 3",
+            "question": "组件通信的数据流",
+            "summary": "Vue 组件通信通常是父组件通过 props 下发数据，子组件通过 emit 触发事件通知父组件更新。",
+            "mistakeType": "logic",
+            "mistakeReason": "容易在子组件里直接改父组件数据，忽略单向数据流和事件通知的边界。",
+            "improvementSuggestion": "写一个父子组件示例：父组件传 title，子组件点击按钮 emit update 事件。",
+        }
+
+    if "goroutine" in text:
+        return {
+            "topic": "Go",
+            "question": "goroutine 的执行与等待",
+            "summary": "goroutine 是 Go 运行时调度的轻量任务；主函数结束后，未等待的 goroutine 也会随程序退出。",
+            "mistakeType": "debugging",
+            "mistakeReason": "容易只知道 go 关键字能启动并发，却忽略主流程需要等待并发任务完成。",
+            "improvementSuggestion": "写两个 goroutine 打印内容，并用 sync.WaitGroup 等待它们结束。",
+        }
+
+    if "channel" in text:
+        return {
+            "topic": "Go",
+            "question": "channel 的发送、接收与阻塞",
+            "summary": "channel 用于 goroutine 之间通信；无缓冲 channel 的发送和接收需要同时准备好，否则会阻塞。",
+            "mistakeType": "boundary",
+            "mistakeReason": "容易把 channel 当成普通队列，忽略阻塞、关闭和消费方数量这些边界。",
+            "improvementSuggestion": "写一个 producer/consumer 示例，分别观察无缓冲和有缓冲 channel 的行为。",
+        }
+
+    if "ownership" in text or "所有权" in text or "borrow" in text or "借用" in text:
+        return {
+            "topic": "Rust",
+            "question": "所有权转移与借用",
+            "summary": "Rust 通过所有权、借用和生命周期限制数据访问，避免悬垂引用和数据竞争。",
+            "mistakeType": "concept",
+            "mistakeReason": "容易只看变量是否还能使用，却没有先判断函数参数接收的是值、不可变引用还是可变引用。",
+            "improvementSuggestion": "写三个函数参数示例：String、&String、&mut String，观察调用后原变量是否还能使用。",
+        }
+
+    return None
+
+
 def _build_fallback_gap_item(question: str, reply: str) -> dict | None:
     if not _looks_like_learning_question(question, reply):
         return None
+
+    rule_based_item = _build_rule_based_gap_item(question, reply)
+    if rule_based_item:
+        return rule_based_item
 
     topic = _infer_topic(question, reply)
     title = _compact_text(question, 48)
@@ -203,6 +287,21 @@ def _build_fallback_gap_item(question: str, reply: str) -> dict | None:
         "mistakeReason": "本轮提问暴露出该知识点还需要进一步梳理。",
         "improvementSuggestion": "回看本轮回答，补一个最小示例，并尝试用自己的话复述关键结论。",
     }
+
+
+def _is_low_quality_gap_item(item: dict) -> bool:
+    text = " ".join(
+        str(item.get(key, ""))
+        for key in ["question", "summary", "mistakeReason", "improvementSuggestion"]
+    )
+    generic_patterns = [
+        "需要继续梳理",
+        "本轮提问暴露",
+        "回看本轮回答",
+        "核心概念、常见写法和使用场景",
+        "尝试用自己的话复述",
+    ]
+    return any(pattern in text for pattern in generic_patterns)
 
 
 def _normalize_analysis(payload: dict) -> dict:
@@ -323,6 +422,15 @@ def create_mistakes_from_assistant(question: str, reply: str, user_id: int | Non
     records: list[MistakeRecord] = []
 
     for index, item in enumerate(raw_items[:2], start=1):
+        if not isinstance(item, dict):
+            continue
+
+        if _is_low_quality_gap_item(item):
+            replacement = _build_rule_based_gap_item(question=question, reply=reply)
+            if not replacement:
+                continue
+            item = replacement
+
         try:
             normalized = _normalize_analysis(item)
         except ValueError:
@@ -332,6 +440,10 @@ def create_mistakes_from_assistant(question: str, reply: str, user_id: int | Non
         topic = str(item.get("topic", "")).strip() or "General"
 
         if not title:
+            continue
+
+        existing_record = MistakeRecord.query.filter_by(user_id=user_id, topic=topic, question=title).first()
+        if existing_record:
             continue
 
         records.append(

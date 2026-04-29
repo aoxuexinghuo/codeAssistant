@@ -1,5 +1,6 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { loadPageState, savePageState } from '../services/pageState'
 import {
   createMistakeEntry,
   deleteMistakeEntry,
@@ -8,6 +9,11 @@ import {
   updateMistakeEntry,
 } from '../services/api/assistant'
 
+const savedState = loadPageState('mistakes', {
+  searchKeyword: '',
+  topicFilter: '',
+  typeFilter: '',
+})
 const mistakes = ref([])
 const loading = ref(true)
 const deletingId = ref(null)
@@ -20,9 +26,9 @@ const submitting = ref(false)
 const updating = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
-const searchKeyword = ref('')
-const topicFilter = ref('')
-const typeFilter = ref('')
+const searchKeyword = ref(savedState.searchKeyword)
+const topicFilter = ref(savedState.topicFilter)
+const typeFilter = ref(savedState.typeFilter)
 let successTimer = null
 
 const form = reactive({
@@ -252,6 +258,14 @@ function typeLabel(type) {
 
 onMounted(() => {
   loadMistakes()
+})
+
+watch([searchKeyword, topicFilter, typeFilter], () => {
+  savePageState('mistakes', {
+    searchKeyword: searchKeyword.value,
+    topicFilter: topicFilter.value,
+    typeFilter: typeFilter.value,
+  })
 })
 </script>
 

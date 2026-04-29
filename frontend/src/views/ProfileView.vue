@@ -1,6 +1,11 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { fetchProfile, fetchProfileInsights, resetProfile, updateProfile } from '../services/api/assistant'
+import {
+  fetchProfile,
+  fetchProfileInsights,
+  resetProfile,
+  updateProfile,
+} from '../services/api/assistant'
 
 const profile = ref(null)
 const insights = ref(null)
@@ -286,5 +291,6 @@ onMounted(() => {
         <p v-else class="history-empty">暂无策略。</p>
       </article>
     </section>
+
   </section>
 </template>

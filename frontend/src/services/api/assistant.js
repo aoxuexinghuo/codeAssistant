@@ -40,6 +40,22 @@ export function uploadKnowledge(payload) {
   return apiClient.post('/api/knowledge', payload)
 }
 
+export function fetchStudyPlans() {
+  return apiClient.get('/api/study-plans')
+}
+
+export function generateStudyPlan(resourceFiles) {
+  return apiClient.post('/api/study-plans/generate', { resourceFiles })
+}
+
+export function deleteStudyPlan(id) {
+  return apiClient.delete(`/api/study-plans/${id}`)
+}
+
+export function updateStudyPlanStep(id, stepIndex, completed) {
+  return apiClient.put(`/api/study-plans/${id}/steps/${stepIndex}`, { completed })
+}
+
 export function fetchReply(payload) {
   return apiClient.post('/api/assistant/reply', payload)
 }
