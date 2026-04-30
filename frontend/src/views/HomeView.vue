@@ -1,6 +1,11 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { deleteStudyPlan, fetchStudyPlans, updateStudyPlanStep } from '../services/api/assistant'
+import {
+  deleteStudyPlan,
+  fetchStudyPlans,
+  generateStudyPlanSummary,
+  updateStudyPlanStep,
+} from '../services/api/assistant'
 
 const entries = [
   {
@@ -28,6 +33,8 @@ const entries = [
 
 const studyPlans = ref([])
 const loadingPlan = ref(true)
+const summarizingPlanId = ref(null)
+const pointsToast = ref('')
 
 async function loadStudyPlans() {
   loadingPlan.value = true
@@ -46,9 +53,16 @@ function replacePlan(nextPlan) {
 }
 
 async function handleTogglePlanStep(planId, stepIndex, completed) {
+  pointsToast.value = ''
+
   try {
-    const nextPlan = await updateStudyPlanStep(planId, stepIndex, completed)
+    const result = await updateStudyPlanStep(planId, stepIndex, completed)
+    const nextPlan = result.plan || result
     replacePlan(nextPlan)
+
+    if (result.awardedPoints) {
+      pointsToast.value = `已获得 ${result.awardedPoints} 积分`
+    }
   } catch (error) {
     console.error('[study-plan] update step failed', error)
   }
@@ -65,6 +79,19 @@ async function handleDeletePlan(id) {
 
 function planProgress(plan) {
   return plan?.plan?.progress || { total: 0, completed: 0, percent: 0 }
+}
+
+async function handleGenerateSummary(id) {
+  summarizingPlanId.value = id
+
+  try {
+    const nextPlan = await generateStudyPlanSummary(id)
+    replacePlan(nextPlan)
+  } catch (error) {
+    console.error('[study-plan] summary failed', error)
+  } finally {
+    summarizingPlanId.value = null
+  }
 }
 
 onMounted(() => {
@@ -91,6 +118,7 @@ onMounted(() => {
         </div>
         <RouterLink to="/learning" class="primary-link">生成新计划</RouterLink>
       </div>
+      <p v-if="pointsToast" class="success-toast compact-toast">{{ pointsToast }}</p>
 
       <div v-if="studyPlans.length" class="study-plan-grid">
         <article v-for="plan in studyPlans" :key="plan.id" class="study-plan-card">
@@ -127,8 +155,40 @@ onMounted(() => {
                 <strong>{{ step.title }}</strong>
                 <span>{{ step.task }}</span>
               </div>
+              <div class="task-points">
+                <span v-if="!step.accepted">+{{ step.points || 1 }}</span>
+                <em v-else>已获得 {{ step.points || 1 }}</em>
+              </div>
             </li>
           </ol>
+          <div v-if="planProgress(plan).percent === 100" class="study-summary-area">
+            <div v-if="!plan.plan.stageSummary" class="study-complete-banner">
+              <span>✓</span>
+              <div>
+                <strong>计划已完成</strong>
+                <p>可以整理一次阶段收获，为下一轮学习做准备。</p>
+              </div>
+              <button
+                class="summary-action-btn"
+                type="button"
+                :disabled="summarizingPlanId === plan.id"
+                @click="handleGenerateSummary(plan.id)"
+              >
+                {{ summarizingPlanId === plan.id ? '生成中' : '生成总结' }}
+              </button>
+            </div>
+            <div v-else class="study-summary-card">
+              <div class="study-summary-title">
+                <span>✓</span>
+                <strong>阶段总结</strong>
+              </div>
+              <p>{{ plan.plan.stageSummary.achievement }}</p>
+              <ul v-if="plan.plan.stageSummary.keyPoints?.length">
+                <li v-for="point in plan.plan.stageSummary.keyPoints" :key="point">{{ point }}</li>
+              </ul>
+              <span>{{ plan.plan.stageSummary.nextStep }}</span>
+            </div>
+          </div>
         </article>
       </div>
 

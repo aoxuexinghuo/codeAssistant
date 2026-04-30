@@ -56,6 +56,10 @@ export function updateStudyPlanStep(id, stepIndex, completed) {
   return apiClient.put(`/api/study-plans/${id}/steps/${stepIndex}`, { completed })
 }
 
+export function generateStudyPlanSummary(id) {
+  return apiClient.post(`/api/study-plans/${id}/summary`, {})
+}
+
 export function fetchReply(payload) {
   return apiClient.post('/api/assistant/reply', payload)
 }

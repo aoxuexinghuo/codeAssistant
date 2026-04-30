@@ -41,6 +41,7 @@ def get_or_create_profile(user_id: int | None = None) -> dict:
         goal=DEFAULT_PROFILE["goal"],
         answer_style=DEFAULT_PROFILE["answerStyle"],
         weak_preference=DEFAULT_PROFILE["weakPreference"],
+        total_points=0,
         created_at=now,
         updated_at=now,
     )

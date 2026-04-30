@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timezone
 
 from ..extensions import db
-from ..models import StudyPlan
+from ..models import StudyPlan, UserProfile
 from .knowledge_service import get_knowledge_item
 from .llm_service import generate_reply
 from .profile_service import build_profile_insights, get_profile_for_prompt
@@ -43,11 +43,52 @@ def update_study_plan_step(plan_id: int, step_index: int, completed: bool, user_
     for step in steps:
         if isinstance(step, dict):
             step["completed"] = bool(step.get("completed", False))
+            step["points"] = int(step.get("points") or _calculate_step_points(step))
 
-    steps[step_index]["completed"] = bool(completed)
+    target_step = steps[step_index]
+    target_step["completed"] = bool(completed)
+    awarded_points = 0
+    profile = _get_or_create_points_profile(user_id=user_id)
+
+    if completed and not bool(target_step.get("accepted", False)):
+        target_step["accepted"] = True
+        target_step["acceptedAt"] = datetime.now(timezone.utc).isoformat()
+        awarded_points = int(target_step["points"])
+        profile.total_points = (profile.total_points or 0) + awarded_points
+        profile.updated_at = datetime.now(timezone.utc)
+
     record.plan_json = json.dumps(plan, ensure_ascii=False)
     record.updated_at = datetime.now(timezone.utc)
+    db.session.commit()
 
+    return {
+        "plan": _study_plan_to_dict(record),
+        "awardedPoints": awarded_points,
+        "totalPoints": profile.total_points or 0,
+    }
+
+
+def generate_study_plan_summary(plan_id: int, user_id: int | None = None) -> dict:
+    record = StudyPlan.query.filter_by(id=plan_id, user_id=user_id).first()
+
+    if not record:
+        raise ValueError("学习计划不存在")
+
+    plan = _load_plan_json(record)
+    progress = _calculate_progress(plan.get("steps"))
+
+    if progress["percent"] < 100:
+        raise ValueError("学习计划尚未完成")
+
+    try:
+        summary = _generate_summary_with_model(plan)
+    except Exception as error:
+        print("[study-plan] summary fallback", {"detail": str(error)})
+        summary = _build_fallback_summary(plan)
+
+    plan["stageSummary"] = summary
+    record.plan_json = json.dumps(plan, ensure_ascii=False)
+    record.updated_at = datetime.now(timezone.utc)
     db.session.commit()
     return _study_plan_to_dict(record)
 
@@ -103,7 +144,6 @@ def _study_plan_to_dict(record: StudyPlan) -> dict:
         steps = []
 
     normalized_steps = []
-    completed_count = 0
 
     for step in steps:
         if not isinstance(step, dict):
@@ -112,18 +152,125 @@ def _study_plan_to_dict(record: StudyPlan) -> dict:
         normalized_step = {
             **step,
             "completed": bool(step.get("completed", False)),
+            "accepted": bool(step.get("accepted", False)),
+            "points": int(step.get("points") or _calculate_step_points(step)),
         }
-        completed_count += 1 if normalized_step["completed"] else 0
         normalized_steps.append(normalized_step)
 
     plan["steps"] = normalized_steps
-    plan["progress"] = {
-        "total": len(normalized_steps),
-        "completed": completed_count,
-        "percent": round((completed_count / len(normalized_steps)) * 100) if normalized_steps else 0,
-    }
+    plan["progress"] = _calculate_progress(normalized_steps)
     data["plan"] = plan
     return data
+
+
+def _get_or_create_points_profile(user_id: int | None = None) -> UserProfile:
+    profile = UserProfile.query.filter(UserProfile.user_id == user_id).order_by(UserProfile.id.asc()).first()
+
+    if profile:
+        return profile
+
+    now = datetime.now(timezone.utc)
+    profile = UserProfile(
+        user_id=user_id,
+        nickname="学习者",
+        level="初级",
+        focus="C语言",
+        goal="课程学习",
+        answer_style="简洁直接",
+        weak_preference="自动记录",
+        total_points=0,
+        created_at=now,
+        updated_at=now,
+    )
+    db.session.add(profile)
+    db.session.flush()
+    return profile
+
+
+def _get_total_points(user_id: int | None = None) -> int:
+    profile = UserProfile.query.filter(UserProfile.user_id == user_id).order_by(UserProfile.id.asc()).first()
+    return int(profile.total_points or 0) if profile else 0
+
+
+def _calculate_step_points(step: dict) -> int:
+    text = f"{step.get('title', '')} {step.get('task', '')} {' '.join(step.get('checkpoints', []) or [])}".lower()
+    score = 1
+
+    if any(keyword in text for keyword in ["写", "示例", "实现", "画出", "验证", "对比"]):
+        score += 1
+    if any(keyword in text for keyword in ["解释", "原因", "调试", "观察", "区分", "标注"]):
+        score += 1
+    if any(keyword in text for keyword in ["独立", "producer", "consumer", "waitgroup", "父子组件", "综合"]):
+        score += 1
+    if len(text) > 120:
+        score += 1
+
+    return max(1, min(5, score))
+
+
+def _calculate_progress(steps) -> dict:
+    if not isinstance(steps, list):
+        return {"total": 0, "completed": 0, "percent": 0}
+
+    normalized_steps = [step for step in steps if isinstance(step, dict)]
+    completed_count = sum(1 for step in normalized_steps if bool(step.get("completed", False)))
+    total = len(normalized_steps)
+
+    return {
+        "total": total,
+        "completed": completed_count,
+        "percent": round((completed_count / total) * 100) if total else 0,
+    }
+
+
+def _generate_summary_with_model(plan: dict) -> dict:
+    system_prompt = (
+        "你是一个编程学习复盘助手。"
+        "请根据已完成的学习计划生成简洁阶段总结。"
+        "只返回 JSON，不要 Markdown，不要解释。"
+        "JSON 字段必须是 achievement, keyPoints, nextStep。"
+        "achievement 用一句话概括完成情况。"
+        "keyPoints 是 2 到 3 条知识收获。"
+        "nextStep 是 1 条下一步建议。"
+    )
+    user_prompt = json.dumps(
+        {
+            "title": plan.get("title", ""),
+            "goal": plan.get("goal", ""),
+            "steps": [
+                {
+                    "title": step.get("title", ""),
+                    "task": step.get("task", ""),
+                    "checkpoints": step.get("checkpoints", []),
+                }
+                for step in plan.get("steps", [])
+                if isinstance(step, dict)
+            ],
+        },
+        ensure_ascii=False,
+    )
+    payload = _extract_json(generate_reply(system_prompt=system_prompt, user_prompt=user_prompt))
+    key_points = payload.get("keyPoints") if isinstance(payload.get("keyPoints"), list) else []
+
+    return {
+        "achievement": str(payload.get("achievement") or "已完成本阶段学习计划。")[:120],
+        "keyPoints": [str(item)[:90] for item in key_points[:3]] or _build_fallback_summary(plan)["keyPoints"],
+        "nextStep": str(payload.get("nextStep") or "选择一个仍不熟悉的点继续提问。")[:120],
+    }
+
+
+def _build_fallback_summary(plan: dict) -> dict:
+    steps = [step for step in plan.get("steps", []) if isinstance(step, dict)]
+    titles = "、".join(step.get("title", "") for step in steps[:3] if step.get("title"))
+
+    return {
+        "achievement": f"已完成《{plan.get('title') or '学习计划'}》中的 {len(steps)} 项任务。",
+        "keyPoints": [
+            f"围绕 {titles or '所选资料'} 完成了阶段性学习。",
+            "已经把资料阅读转化为可执行任务，并完成了对应检查点。",
+        ],
+        "nextStep": "回到智能答疑，围绕最不确定的一点提出一个带代码片段的问题。",
+    }
 
 
 def _generate_plan_with_model(resources: list[dict], profile: dict, insights: dict) -> dict:

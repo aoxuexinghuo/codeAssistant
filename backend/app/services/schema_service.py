@@ -8,6 +8,7 @@ def ensure_lightweight_migrations() -> None:
     inspector = inspect(db.engine)
 
     _add_column_if_missing(inspector, "user_profile", "user_id", "INTEGER")
+    _add_column_if_missing(inspector, "user_profile", "total_points", "INTEGER DEFAULT 0")
     _add_column_if_missing(inspector, "conversation_history", "user_id", "INTEGER")
     _add_column_if_missing(inspector, "mistake_records", "user_id", "INTEGER")
 

@@ -38,6 +38,13 @@ const strategyTips = computed(() => insights.value?.strategyTips || [])
 const topTopic = computed(() => topicDistribution.value[0]?.name || form.focus)
 const currentPlan = computed(() => studyPlans.value[0] || null)
 const currentProgress = computed(() => currentPlan.value?.plan?.progress || { total: 0, completed: 0, percent: 0 })
+const pendingTaskCount = computed(() => Math.max(0, currentProgress.value.total - currentProgress.value.completed))
+const totalPoints = computed(() => profile.value?.totalPoints || 0)
+const pointLevel = computed(() => Math.floor(totalPoints.value / 50) + 1)
+const currentLevelStart = computed(() => (pointLevel.value - 1) * 50)
+const nextLevelPoint = computed(() => pointLevel.value * 50)
+const levelProgress = computed(() => Math.min(100, ((totalPoints.value - currentLevelStart.value) / 50) * 100))
+const pointsToNextLevel = computed(() => nextLevelPoint.value - totalPoints.value)
 const statusCards = computed(() => [
   {
     label: '累计提问',
@@ -52,9 +59,9 @@ const statusCards = computed(() => [
     text: '来自知识点卡片',
   },
   {
-    label: '计划进度',
-    value: currentProgress.value.percent,
-    unit: '%',
+    label: '进行中任务',
+    value: pendingTaskCount.value,
+    unit: '项',
     text: currentPlan.value ? currentPlan.value.title : '暂无计划',
   },
   {
@@ -89,7 +96,7 @@ const nextActions = computed(() => {
       actions.push({
         title: `继续完成：${nextStep.title}`,
         text: nextStep.task,
-        to: '/',
+        to: '/home',
         action: '去首页',
       })
     }
@@ -198,6 +205,16 @@ onMounted(() => {
     <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
     <p v-if="message" class="success-toast">{{ message }}</p>
 
+    <section class="level-progress-card">
+      <div>
+        <h3>Lv.{{ pointLevel }} 学习等级</h3>
+        <p>累计 {{ totalPoints }} 积分，距离 Lv.{{ pointLevel + 1 }} 还差 {{ pointsToNextLevel }} 分。</p>
+      </div>
+      <div class="level-progress-track">
+        <span :style="{ width: `${levelProgress}%` }"></span>
+      </div>
+    </section>
+
     <section class="diagnosis-status-grid">
       <article v-for="card in statusCards" :key="card.label" class="diagnosis-stat-card">
         <span>{{ card.label }}</span>
@@ -209,8 +226,8 @@ onMounted(() => {
     <section class="diagnosis-layout">
       <article class="profile-glass-card diagnosis-action-card">
         <div class="section-heading">
-          <span class="diagnosis-kicker">Next</span>
           <h3>下一步建议</h3>
+          <p class="panel-desc">根据当前计划和近期薄弱点生成。</p>
         </div>
         <div class="diagnosis-action-list">
           <RouterLink v-for="(item, index) in nextActions" :key="item.title" :to="item.to" class="diagnosis-action">
@@ -226,8 +243,8 @@ onMounted(() => {
 
       <article class="profile-glass-card diagnosis-focus-card">
         <div class="section-heading">
-          <span class="diagnosis-kicker">Focus</span>
           <h3>薄弱点诊断</h3>
+          <p class="panel-desc">按主题聚合最近暴露出的知识断点。</p>
         </div>
         <div v-if="weakTopicGroups.length" class="weak-diagnosis-list">
           <div v-for="group in weakTopicGroups" :key="group.topic" class="weak-diagnosis-item">
@@ -246,8 +263,8 @@ onMounted(() => {
     <section class="profile-dashboard">
       <form class="profile-glass-card profile-preference-card" @submit.prevent="handleSave">
         <div class="section-heading">
-          <span class="diagnosis-kicker">Preference</span>
           <h3>个人偏好</h3>
+          <p class="panel-desc">这些设置会影响答疑时的解释方式。</p>
         </div>
 
         <label>
@@ -297,8 +314,8 @@ onMounted(() => {
 
       <article class="profile-glass-card diagnosis-context-card">
         <div class="section-heading">
-          <span class="diagnosis-kicker">Context</span>
           <h3>画像依据</h3>
+          <p class="panel-desc">根据历史提问和薄弱点记录形成。</p>
         </div>
         <div class="topic-rank-list" v-if="topicDistribution.length">
           <div v-for="item in topicDistribution" :key="item.name" class="topic-rank-item">

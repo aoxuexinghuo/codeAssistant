@@ -30,6 +30,7 @@ class UserProfile(db.Model):
     goal = db.Column(db.String(80), nullable=False, default="课程学习")
     answer_style = db.Column(db.String(80), nullable=False, default="简洁直接")
     weak_preference = db.Column(db.String(80), nullable=False, default="自动记录")
+    total_points = db.Column(db.Integer, nullable=False, default=0)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False)
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False)
 
@@ -42,6 +43,7 @@ class UserProfile(db.Model):
             "goal": self.goal,
             "answerStyle": self.answer_style,
             "weakPreference": self.weak_preference,
+            "totalPoints": self.total_points or 0,
             "createdAt": self.created_at.isoformat(),
             "updatedAt": self.updated_at.isoformat(),
         }
