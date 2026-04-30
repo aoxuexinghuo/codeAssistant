@@ -6,7 +6,7 @@ from ..config import settings
 
 def _assert_llm_config() -> None:
     if not settings.llm_api_key:
-        raise ValueError("缺少 LLM_API_KEY 或 DASHSCOPE_API_KEY 环境变量")
+        raise ValueError("缺少 LLM_API_KEY 或 DEEPSEEK_API_KEY 环境变量")
     if not settings.llm_base_url:
         raise ValueError("缺少 LLM_BASE_URL 环境变量")
     if not settings.llm_model:
@@ -16,7 +16,7 @@ def _assert_llm_config() -> None:
 def _create_chat_model() -> ChatOpenAI:
     _assert_llm_config()
 
-    # 这里统一走 LangChain 的 ChatOpenAI，并通过 base_url 接阿里云百炼这类
+    # 这里统一走 LangChain 的 ChatOpenAI，并通过 base_url 接 DeepSeek 这类
     # OpenAI-compatible 平台。这样后面做 RAG 时，可以继续沿用 LangChain 生态。
     return ChatOpenAI(
         api_key=settings.llm_api_key,

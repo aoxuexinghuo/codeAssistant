@@ -66,7 +66,7 @@ async function handleGeneratePlan() {
   try {
     await generateStudyPlan(selectedFiles.value)
     selectedFiles.value = []
-    successMessage.value = '学习计划已生成，可在学习档案中查看。'
+    successMessage.value = '学习计划已生成，可在首页查看。'
   } catch (error) {
     errorMessage.value = error.message
   } finally {
@@ -91,7 +91,7 @@ watch([activeTopic, selectedFiles], () => {
     <header class="page-hero compact-hero">
       <div>
         <div class="badge">Knowledge</div>
-        <h2>学习中心</h2>
+        <h2>知识库</h2>
         <p class="panel-desc">浏览本地 Markdown 知识库，答疑时也会检索同一批资料。</p>
       </div>
       <RouterLink to="/learning/upload" class="primary-link">上传个人资料</RouterLink>

@@ -34,8 +34,8 @@
 - LangChain
 - langchain-openai
 - Chroma
-- OpenAI-compatible 大模型接口
-- OpenAI-compatible Embedding 接口
+- DeepSeek API
+- OpenAI-compatible 模型接口
 
 ## 项目结构
 
@@ -58,7 +58,7 @@
 │  │  │  ├─ retriever_service.py         # 检索入口
 │  │  │  ├─ schema_service.py            # SQLite 轻量迁移
 │  │  │  ├─ study_plan_service.py        # 学习计划
-│  │  │  └─ vector_store_service.py      # Chroma 向量库
+│  │  │  └─ vector_store_service.py      # Chroma 向量库，可选
 │  │  ├─ __init__.py                     # Flask 应用工厂
 │  │  ├─ config.py                       # 配置项
 │  │  ├─ extensions.py                   # Flask 扩展
@@ -67,7 +67,7 @@
 │  ├─ data                               # SQLite 与关键词索引
 │  ├─ knowledge                          # 系统 Markdown 知识库
 │  ├─ user_knowledge                     # 用户上传资料
-│  ├─ vector_store                       # Chroma 向量库
+│  ├─ vector_store                       # Chroma 向量库，可选
 │  ├─ requirements.txt
 │  ├─ package.json
 │  └─ server.py
@@ -97,8 +97,6 @@ Python >= 3.10
 
 项目当前在 Python 3.12 环境下验证过。
 
-如果 Node.js 版本低于 Vite 推荐版本，构建时可能出现警告，但不一定影响运行。
-
 ## 安装依赖
 
 在项目根目录执行：
@@ -114,57 +112,97 @@ python -m pip install -r backend/requirements.txt
 npm --prefix frontend install
 ```
 
-## 环境变量配置
+## DeepSeek API 配置
 
-后端使用 OpenAI-compatible 接口调用大模型。以阿里云百炼 DashScope 为例，PowerShell 可这样配置：
+项目后端通过 LangChain 的 `ChatOpenAI` 调用 OpenAI-compatible 接口。当前默认按 DeepSeek 配置：
 
-```powershell
-$env:DASHSCOPE_API_KEY="你的 API Key"
-$env:LLM_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
-$env:LLM_MODEL="qvq-max-2025-03-25"
+```text
+LLM_BASE_URL 默认值：https://api.deepseek.com
+LLM_MODEL 默认值：deepseek-v4-flash
 ```
 
-常用配置：
+PowerShell 临时配置：
+
+```powershell
+$env:DEEPSEEK_API_KEY="你的 DeepSeek API Key"
+$env:LLM_BASE_URL="https://api.deepseek.com"
+$env:LLM_MODEL="deepseek-v4-flash"
+$env:RAG_RETRIEVER_TYPE="keyword"
+```
+
+临时配置只对当前 PowerShell 窗口有效。请在同一个窗口里继续启动后端：
+
+```powershell
+npm run dev:backend
+```
+
+PowerShell 永久配置：
+
+```powershell
+[Environment]::SetEnvironmentVariable("DEEPSEEK_API_KEY", "你的 DeepSeek API Key", "User")
+[Environment]::SetEnvironmentVariable("LLM_BASE_URL", "https://api.deepseek.com", "User")
+[Environment]::SetEnvironmentVariable("LLM_MODEL", "deepseek-v4-flash", "User")
+[Environment]::SetEnvironmentVariable("RAG_RETRIEVER_TYPE", "keyword", "User")
+```
+
+永久配置后需要关闭当前终端，重新打开 PowerShell，再启动后端。
+
+也可以使用通用变量名：
+
+```powershell
+$env:LLM_API_KEY="你的 DeepSeek API Key"
+$env:LLM_BASE_URL="https://api.deepseek.com"
+$env:LLM_MODEL="deepseek-v4-flash"
+$env:RAG_RETRIEVER_TYPE="keyword"
+```
+
+Key 读取优先级：
+
+```text
+LLM_API_KEY
+→ DEEPSEEK_API_KEY
+```
+
+说明：
+
+- `LLM_API_KEY` 和 `DEEPSEEK_API_KEY` 配一个即可。
+- 如果同时配置，优先使用 `LLM_API_KEY`。
+- `deepseek-v4-flash` 是当前默认模型；如果你的账号更适合其他 DeepSeek 模型，也可以把 `LLM_MODEL` 改成对应模型名。
+- DeepSeek 主要用于聊天模型调用；不要把 DeepSeek Key 当成 Embedding Key 使用。
+
+常用可选配置：
 
 ```powershell
 $env:PORT="3000"
 $env:DATABASE_URL="sqlite:///backend/data/programming_assistant.db"
-$env:LLM_API_KEY="你的聊天模型 Key"
-$env:DASHSCOPE_API_KEY="你的 DashScope Key"
-$env:LLM_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
-$env:LLM_MODEL="qvq-max-2025-03-25"
 $env:LLM_TEMPERATURE="0.7"
 $env:LLM_MAX_TOKENS="1200"
-```
-
-RAG 向量检索相关配置：
-
-```powershell
-$env:RAG_RETRIEVER_TYPE="vector"
 $env:RAG_TOP_K="3"
 $env:RAG_MIN_SCORE="0.25"
 $env:RAG_CHUNK_SIZE="500"
 $env:RAG_CHUNK_OVERLAP="80"
-$env:EMBEDDING_MODEL="text-embedding-v4"
 ```
 
-Embedding Key 读取优先级：
+## RAG 检索配置
 
-```text
-EMBEDDING_API_KEY
-→ LLM_API_KEY
-→ DASHSCOPE_API_KEY
-```
-
-如果聊天模型和 Embedding 都使用同一个平台，通常只配置 `DASHSCOPE_API_KEY` 即可。
-
-如果暂时不想调用外部 Embedding 服务，可以切换为关键词检索：
+当前默认使用关键词检索：
 
 ```powershell
 $env:RAG_RETRIEVER_TYPE="keyword"
 ```
 
-注意：使用向量检索时，后端启动会将 `backend/knowledge` 中的 Markdown 内容发送给 Embedding 服务生成向量。个人隐私资料请谨慎上传到不可信服务。
+这样不需要额外 Embedding 服务，也不会把本地 Markdown 资料发送到第三方向量化接口。
+
+如果后续要启用 Chroma 向量检索，需要额外准备一个 OpenAI-compatible Embedding 服务，并配置：
+
+```powershell
+$env:RAG_RETRIEVER_TYPE="vector"
+$env:EMBEDDING_API_KEY="你的 Embedding API Key"
+$env:EMBEDDING_BASE_URL="你的 Embedding 服务地址"
+$env:EMBEDDING_MODEL="你的 Embedding 模型名"
+```
+
+注意：DeepSeek Key 不等于 Embedding Key。没有单独 Embedding 服务时，请保持 `RAG_RETRIEVER_TYPE=keyword`。
 
 ## 启动项目
 
@@ -227,7 +265,7 @@ python -m compileall backend/app
 - 学习任务完成状态
 - 智能答疑入口
 - 薄弱点记录入口
-- 学习中心入口
+- 知识库入口
 
 学习计划可以在首页直接勾选完成状态，也可以删除已有计划。
 
@@ -252,9 +290,17 @@ python -m compileall backend/app
 - 薄弱点沉淀结果提示
 - RAG 命中来源展示
 
-### 学习中心
+### 知识库
 
-学习中心展示系统资料和当前用户上传的个人资料。
+知识库展示系统资料和当前用户上传的个人资料。
+
+页面路由仍保留为：
+
+```text
+/learning
+```
+
+也就是说，用户看到的名称是“知识库”，内部路由暂时仍沿用旧的 `learning` 路径。
 
 资料来源：
 
@@ -302,7 +348,21 @@ ref 与 reactive 的使用边界
 
 ### 学习档案
 
-学习档案用于展示和维护用户画像。
+学习档案当前更偏向“学习诊断页”，用于回答三个问题：
+
+```text
+我最近学得怎么样？
+我主要卡在哪里？
+下一步应该做什么？
+```
+
+页面包含：
+
+- 状态总览：累计提问、薄弱点数量、学习计划进度、当前方向。
+- 下一步建议：根据学习计划、薄弱点和当前方向给出行动入口。
+- 薄弱点诊断：按主题聚合近期薄弱点。
+- 画像依据：展示近期关注方向分布和个性化策略。
+- 个人偏好：维护回答风格和学习目标。
 
 手动画像包括：
 
@@ -322,14 +382,6 @@ ref 与 reactive 的使用边界
 薄弱点记录
 答疑模式使用情况
 ```
-
-展示形式：
-
-- 学习活跃度
-- 能力能量环
-- 方向气泡图
-- 薄弱点标签云
-- 个性化策略
 
 画像会影响普通答疑和 RAG 答疑的提示词。
 
@@ -363,21 +415,36 @@ X-User-Token: <token>
 当前 RAG 支持两种检索方式：
 
 ```text
-vector   Chroma + Embedding 向量检索
-keyword  关键词检索兜底
+keyword  关键词检索，当前默认方式
+vector   Chroma + Embedding 向量检索，需要额外 Embedding 服务
 ```
 
-整体流程：
+关键词检索流程：
 
 ```text
 读取 Markdown 资料
 → 解析元数据
 → 文本切片
-→ 向量化并写入 Chroma
+→ 建立关键词索引
+→ 用户提问
+→ 关键词匹配相关片段
+→ 拼接上下文
+→ 调用 DeepSeek 回答
+→ 返回回答和来源
+```
+
+向量检索流程：
+
+```text
+读取 Markdown 资料
+→ 解析元数据
+→ 文本切片
+→ 调用 Embedding 服务生成向量
+→ 写入 Chroma
 → 用户提问
 → 检索相关片段
 → 拼接上下文
-→ 调用大模型回答
+→ 调用 DeepSeek 回答
 → 返回回答和来源
 ```
 
@@ -396,12 +463,12 @@ POST /api/rag/reply-stream
 
 ## 学习计划说明
 
-学习计划由学习中心勾选资料生成。
+学习计划由知识库勾选资料生成。
 
 流程：
 
 ```text
-学习中心勾选资料
+知识库勾选资料
 → 生成学习计划
 → 后端结合用户画像、近期薄弱点和所选资料生成任务
 → 保存到当前用户账号
@@ -438,7 +505,7 @@ tags: [指针, 地址, 解引用]
 
 这些元数据会用于：
 
-- 学习中心卡片展示
+- 知识库卡片展示
 - RAG 来源展示
 - 资料分类
 - 学习计划生成
@@ -532,17 +599,39 @@ POST   /api/mistakes/reorder
 http://localhost:3000/api/health
 ```
 
-### 2. 模型接口调用失败
+### 2. DeepSeek 接口调用失败
 
 检查环境变量：
 
 ```powershell
-echo $env:DASHSCOPE_API_KEY
+echo $env:DEEPSEEK_API_KEY
+echo $env:LLM_API_KEY
 echo $env:LLM_BASE_URL
 echo $env:LLM_MODEL
 ```
 
-同时确认当前 API Key 支持所填写的模型和 HTTP 调用方式。
+推荐最小配置：
+
+```powershell
+$env:DEEPSEEK_API_KEY="你的 DeepSeek API Key"
+$env:LLM_BASE_URL="https://api.deepseek.com"
+$env:LLM_MODEL="deepseek-v4-flash"
+$env:RAG_RETRIEVER_TYPE="keyword"
+```
+
+如果看到：
+
+```text
+LangChain 模型调用失败: baseURL=https://api.deepseek.com model=deepseek-v4-flash reason=缺少 LLM_API_KEY 或 DEEPSEEK_API_KEY 环境变量
+```
+
+说明启动后端的那个终端没有读到 Key。需要在同一个 PowerShell 窗口设置环境变量后再执行：
+
+```powershell
+npm run dev:backend
+```
+
+如果使用 `[Environment]::SetEnvironmentVariable(..., "User")` 做了永久配置，需要关闭并重新打开 PowerShell，旧终端不会自动读取新的用户环境变量。
 
 ### 3. RAG 没有命中来源
 
@@ -551,7 +640,7 @@ echo $env:LLM_MODEL
 - 问题和知识库资料相关度不足。
 - `RAG_MIN_SCORE` 设置过高。
 - Markdown 修改后后端没有重启。
-- Embedding 配置不可用，系统回退到关键词检索。
+- 当前使用关键词检索，问题表述和资料关键词差异太大。
 
 ### 4. 自动沉淀薄弱点没有出现
 
@@ -574,6 +663,7 @@ Vite requires Node.js version 20.19+ or 22.12+
 
 ## 后续可扩展方向
 
+- 接入独立 Embedding 服务，升级向量检索。
 - 引入 rerank 模型，提高 RAG 命中质量。
 - 将薄弱点与知识库资料建立推荐关系。
 - 根据学习计划完成情况生成阶段总结。

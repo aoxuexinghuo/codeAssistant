@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import {
   fetchProfile,
   fetchProfileInsights,
+  fetchStudyPlans,
   resetProfile,
   updateProfile,
 } from '../services/api/assistant'
@@ -13,6 +14,7 @@ const loading = ref(true)
 const saving = ref(false)
 const message = ref('')
 const errorMessage = ref('')
+const studyPlans = ref([])
 
 const form = reactive({
   nickname: '',
@@ -30,16 +32,87 @@ const styleOptions = ['简洁直接', '多举例', '逐步引导', '少给完整
 const weakOptions = ['自动记录', '只在明显薄弱时记录', '手动记录']
 
 const topicDistribution = computed(() => insights.value?.topicDistribution || [])
-const abilityScores = computed(() => insights.value?.abilityScores || [])
 const recentWeakPoints = computed(() => insights.value?.recentWeakPoints || [])
 const strategyTips = computed(() => insights.value?.strategyTips || [])
 
-const maxTopicValue = computed(() => Math.max(...topicDistribution.value.map((item) => item.value), 1))
 const topTopic = computed(() => topicDistribution.value[0]?.name || form.focus)
-const learningPulse = computed(() => {
-  const questions = insights.value?.questionCount || 0
-  const mistakes = insights.value?.mistakeCount || 0
-  return Math.min(96, 38 + questions * 3 + mistakes * 2)
+const currentPlan = computed(() => studyPlans.value[0] || null)
+const currentProgress = computed(() => currentPlan.value?.plan?.progress || { total: 0, completed: 0, percent: 0 })
+const statusCards = computed(() => [
+  {
+    label: '累计提问',
+    value: insights.value?.questionCount || 0,
+    unit: '次',
+    text: '来自会话历史',
+  },
+  {
+    label: '薄弱点',
+    value: insights.value?.mistakeCount || 0,
+    unit: '条',
+    text: '来自知识点卡片',
+  },
+  {
+    label: '计划进度',
+    value: currentProgress.value.percent,
+    unit: '%',
+    text: currentPlan.value ? currentPlan.value.title : '暂无计划',
+  },
+  {
+    label: '当前方向',
+    value: topTopic.value,
+    unit: '',
+    text: `${form.level} · ${form.goal}`,
+  },
+])
+const weakTopicGroups = computed(() => {
+  const groups = recentWeakPoints.value.reduce((result, item) => {
+    const topic = item.topic || '编程基础'
+    if (!result[topic]) {
+      result[topic] = []
+    }
+    result[topic].push(item)
+    return result
+  }, {})
+
+  return Object.entries(groups).map(([topic, items]) => ({
+    topic,
+    count: items.length,
+    items: items.slice(0, 3),
+  }))
+})
+const nextActions = computed(() => {
+  const actions = []
+
+  if (currentPlan.value && currentProgress.value.percent < 100) {
+    const nextStep = currentPlan.value.plan?.steps?.find((step) => !step.completed)
+    if (nextStep) {
+      actions.push({
+        title: `继续完成：${nextStep.title}`,
+        text: nextStep.task,
+        to: '/',
+        action: '去首页',
+      })
+    }
+  }
+
+  if (recentWeakPoints.value.length) {
+    const weakPoint = recentWeakPoints.value[0]
+    actions.push({
+      title: `复盘：${weakPoint.title}`,
+      text: `最近薄弱点集中在 ${weakPoint.topic || '编程基础'}，建议先补一个最小示例。`,
+      to: '/mistakes',
+      action: '看薄弱点',
+    })
+  }
+
+  actions.push({
+    title: `围绕 ${topTopic.value} 提一个追问`,
+    text: '用一个具体代码片段或报错来提问，系统更容易给出可执行建议。',
+    to: '/assistant',
+    action: '去提问',
+  })
+
+  return actions.slice(0, 3)
 })
 
 function syncForm(nextProfile) {
@@ -56,9 +129,14 @@ async function loadProfilePage() {
   errorMessage.value = ''
 
   try {
-    const [profileData, insightsData] = await Promise.all([fetchProfile(), fetchProfileInsights()])
+    const [profileData, insightsData, planData] = await Promise.all([
+      fetchProfile(),
+      fetchProfileInsights(),
+      fetchStudyPlans(),
+    ])
     profile.value = profileData
     insights.value = insightsData
+    studyPlans.value = planData
     syncForm(profileData)
   } catch (error) {
     errorMessage.value = error.message
@@ -101,33 +179,6 @@ async function handleReset() {
   }
 }
 
-function ringStyle(value) {
-  const safeValue = Math.max(0, Math.min(100, Number(value) || 0))
-  return {
-    background: `conic-gradient(#256f61 ${safeValue * 3.6}deg, #e3eee9 0deg)`,
-  }
-}
-
-function bubbleStyle(item, index) {
-  const size = 76 + (item.value / maxTopicValue.value) * 76
-  const positions = [
-    ['8%', '18%'],
-    ['52%', '6%'],
-    ['34%', '46%'],
-    ['70%', '42%'],
-    ['12%', '66%'],
-    ['58%', '70%'],
-  ]
-  const [left, top] = positions[index % positions.length]
-
-  return {
-    width: `${size}px`,
-    height: `${size}px`,
-    left,
-    top,
-  }
-}
-
 onMounted(() => {
   loadProfilePage()
 })
@@ -147,29 +198,56 @@ onMounted(() => {
     <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
     <p v-if="message" class="success-toast">{{ message }}</p>
 
-    <section class="profile-dashboard">
-      <article class="profile-glass-card profile-id-card">
-        <div class="profile-orbit">
-          <span></span>
-          <strong>{{ learningPulse }}</strong>
-          <small>学习活跃度</small>
+    <section class="diagnosis-status-grid">
+      <article v-for="card in statusCards" :key="card.label" class="diagnosis-stat-card">
+        <span>{{ card.label }}</span>
+        <strong>{{ card.value }}<small>{{ card.unit }}</small></strong>
+        <p>{{ card.text }}</p>
+      </article>
+    </section>
+
+    <section class="diagnosis-layout">
+      <article class="profile-glass-card diagnosis-action-card">
+        <div class="section-heading">
+          <span class="diagnosis-kicker">Next</span>
+          <h3>下一步建议</h3>
         </div>
-        <div>
-          <p class="badge">Learner</p>
-          <h3>{{ form.nickname || '学习者' }}</h3>
-          <p>{{ form.level }} · {{ form.focus }} · {{ form.goal }}</p>
-          <div class="profile-mini-stats">
-            <span>{{ insights?.questionCount || 0 }} 次提问</span>
-            <span>{{ insights?.mistakeCount || 0 }} 条薄弱点</span>
-            <span>{{ topTopic }}</span>
-          </div>
+        <div class="diagnosis-action-list">
+          <RouterLink v-for="(item, index) in nextActions" :key="item.title" :to="item.to" class="diagnosis-action">
+            <span>{{ String(index + 1).padStart(2, '0') }}</span>
+            <div>
+              <strong>{{ item.title }}</strong>
+              <p>{{ item.text }}</p>
+            </div>
+            <em>{{ item.action }}</em>
+          </RouterLink>
         </div>
       </article>
 
+      <article class="profile-glass-card diagnosis-focus-card">
+        <div class="section-heading">
+          <span class="diagnosis-kicker">Focus</span>
+          <h3>薄弱点诊断</h3>
+        </div>
+        <div v-if="weakTopicGroups.length" class="weak-diagnosis-list">
+          <div v-for="group in weakTopicGroups" :key="group.topic" class="weak-diagnosis-item">
+            <div>
+              <strong>{{ group.topic }}</strong>
+              <span>{{ group.count }} 条近期记录</span>
+            </div>
+            <p v-for="item in group.items" :key="item.id">{{ item.title }}</p>
+            <RouterLink to="/mistakes" class="text-link">查看记录</RouterLink>
+          </div>
+        </div>
+        <p v-else class="history-empty">暂无薄弱点记录。完成几次答疑后，这里会形成诊断。</p>
+      </article>
+    </section>
+
+    <section class="profile-dashboard">
       <form class="profile-glass-card profile-preference-card" @submit.prevent="handleSave">
         <div class="section-heading">
-          <h3>基础偏好</h3>
-          <p class="panel-desc">这些信息会进入答疑提示词，影响回答风格。</p>
+          <span class="diagnosis-kicker">Preference</span>
+          <h3>个人偏好</h3>
         </div>
 
         <label>
@@ -216,81 +294,26 @@ onMounted(() => {
           <button class="primary-btn" type="submit" :disabled="saving">{{ saving ? '保存中...' : '保存档案' }}</button>
         </div>
       </form>
-    </section>
 
-    <section class="profile-visual-grid">
-      <article class="profile-glass-card">
+      <article class="profile-glass-card diagnosis-context-card">
         <div class="section-heading">
-          <h3>能力能量环</h3>
-          <p class="panel-desc">根据提问模式和薄弱点粗略估计。</p>
+          <span class="diagnosis-kicker">Context</span>
+          <h3>画像依据</h3>
         </div>
-        <div class="energy-ring-grid" v-if="abilityScores.length">
-          <div v-for="item in abilityScores" :key="item.name" class="energy-ring-card">
-            <div class="energy-ring" :style="ringStyle(item.value)">
-              <div>
-                <strong>{{ item.value }}</strong>
-              </div>
-            </div>
+        <div class="topic-rank-list" v-if="topicDistribution.length">
+          <div v-for="item in topicDistribution" :key="item.name" class="topic-rank-item">
             <span>{{ item.name }}</span>
+            <div>
+              <i :style="{ width: `${item.value}%` }"></i>
+            </div>
+            <strong>{{ item.value }}%</strong>
           </div>
         </div>
-        <p v-else class="history-empty">{{ loading ? '正在生成能力概览。' : '暂无足够数据。' }}</p>
-      </article>
-
-      <article class="profile-glass-card">
-        <div class="section-heading">
-          <h3>方向气泡图</h3>
-          <p class="panel-desc">气泡越大，代表近期关注越多。</p>
-        </div>
-        <div class="topic-bubble-field" v-if="topicDistribution.length">
-          <span
-            v-for="(item, index) in topicDistribution"
-            :key="item.name"
-            class="topic-bubble"
-            :style="bubbleStyle(item, index)"
-          >
-            <strong>{{ item.name }}</strong>
-            <small>{{ item.value }}%</small>
-          </span>
-        </div>
         <p v-else class="history-empty">继续提问后会形成方向分布。</p>
+        <div class="strategy-note-list compact-strategy" v-if="strategyTips.length">
+          <p v-for="tip in strategyTips" :key="tip">{{ tip }}</p>
+        </div>
       </article>
     </section>
-
-    <section class="profile-lower-grid">
-      <article class="profile-glass-card">
-        <div class="section-heading">
-          <h3>薄弱点标签云</h3>
-          <p class="panel-desc">系统最近捕捉到的知识断点。</p>
-        </div>
-        <div class="weak-cloud" v-if="recentWeakPoints.length">
-          <RouterLink
-            v-for="(item, index) in recentWeakPoints"
-            :key="item.id"
-            to="/mistakes"
-            class="weak-cloud-chip"
-            :class="`chip-level-${(index % 3) + 1}`"
-          >
-            #{{ item.topic }} · {{ item.title }}
-          </RouterLink>
-        </div>
-        <p v-else class="history-empty">暂无薄弱点记录。</p>
-      </article>
-
-      <article class="profile-glass-card strategy-board">
-        <div class="section-heading">
-          <h3>个性化策略</h3>
-          <p class="panel-desc">系统当前会怎样调整回答。</p>
-        </div>
-        <div class="strategy-note-list" v-if="strategyTips.length">
-          <p v-for="(tip, index) in strategyTips" :key="tip" class="strategy-note">
-            <span>{{ String(index + 1).padStart(2, '0') }}</span>
-            {{ tip }}
-          </p>
-        </div>
-        <p v-else class="history-empty">暂无策略。</p>
-      </article>
-    </section>
-
   </section>
 </template>

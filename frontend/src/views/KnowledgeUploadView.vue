@@ -64,7 +64,7 @@ function handleFileSelect(event) {
         <h2>上传个人资料</h2>
         <p class="panel-desc">把自己的 Markdown 笔记加入个人知识库，答疑时也会参与检索。</p>
       </div>
-      <RouterLink to="/learning" class="ghost-btn">返回学习中心</RouterLink>
+      <RouterLink to="/learning" class="ghost-btn">返回知识库</RouterLink>
     </header>
 
     <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>

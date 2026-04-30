@@ -22,7 +22,11 @@ def _import_chroma():
 
 def _create_embedding_model() -> OpenAIEmbeddings:
     if not settings.embedding_api_key:
-        raise ValueError("缺少 EMBEDDING_API_KEY、LLM_API_KEY 或 DASHSCOPE_API_KEY 环境变量")
+        raise ValueError("缺少 EMBEDDING_API_KEY 环境变量")
+    if not settings.embedding_base_url:
+        raise ValueError("缺少 EMBEDDING_BASE_URL 环境变量")
+    if not settings.embedding_model:
+        raise ValueError("缺少 EMBEDDING_MODEL 环境变量")
 
     return OpenAIEmbeddings(
         api_key=settings.embedding_api_key,

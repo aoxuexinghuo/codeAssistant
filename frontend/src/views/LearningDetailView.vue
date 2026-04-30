@@ -47,7 +47,7 @@ onMounted(() => {
         <h2>{{ loading ? '正在加载资料' : '资料不存在' }}</h2>
         <p class="panel-desc">{{ loading ? '请稍候。' : errorMessage || '未找到对应资料。' }}</p>
       </div>
-      <RouterLink to="/learning" class="primary-link">返回学习中心</RouterLink>
+      <RouterLink to="/learning" class="primary-link">返回知识库</RouterLink>
     </header>
 
     <article v-if="resource" class="panel knowledge-detail-card">

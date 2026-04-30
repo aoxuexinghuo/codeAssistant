@@ -19,10 +19,10 @@ const entries = [
   },
   {
     step: '03',
-    title: '学习中心',
-    text: '按 C、Java、Go、Rust、Vue 3 查看对应的学习资料入口。',
+    title: '知识库',
+    text: '按 C、Java、Go、Rust、Vue 3 查看对应资料，并用于知识库增强回答。',
     to: '/learning',
-    mark: '学',
+    mark: '库',
   },
 ]
 
