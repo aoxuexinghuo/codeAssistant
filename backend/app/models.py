@@ -84,6 +84,11 @@ class MistakeRecord(db.Model):
     mistake_type = db.Column(db.String(32), nullable=False, index=True)
     mistake_reason = db.Column(db.Text, nullable=False)
     improvement_suggestion = db.Column(db.Text, nullable=False)
+    review_status = db.Column(db.String(32), nullable=False, default="pending", index=True)
+    review_note = db.Column(db.Text, nullable=False, default="")
+    review_points = db.Column(db.Integer, nullable=False, default=0)
+    reviewed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    mastered_at = db.Column(db.DateTime(timezone=True), nullable=True)
     sort_order = db.Column(db.Integer, nullable=False, index=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, index=True)
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False)
@@ -99,6 +104,11 @@ class MistakeRecord(db.Model):
             "mistakeType": self.mistake_type,
             "mistakeReason": self.mistake_reason,
             "improvementSuggestion": self.improvement_suggestion,
+            "reviewStatus": self.review_status or "pending",
+            "reviewNote": self.review_note or "",
+            "reviewPoints": self.review_points or 0,
+            "reviewedAt": self.reviewed_at.isoformat() if self.reviewed_at else None,
+            "masteredAt": self.mastered_at.isoformat() if self.mastered_at else None,
             "sortOrder": self.sort_order,
             "createdAt": self.created_at.isoformat(),
             "updatedAt": self.updated_at.isoformat(),

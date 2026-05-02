@@ -5,10 +5,12 @@ from datetime import datetime, timezone
 from sqlalchemy import func
 
 from ..extensions import db
-from ..models import MistakeRecord
+from ..models import MistakeRecord, UserProfile
 from .llm_service import generate_reply
 
 _ALLOWED_TYPES = {"concept", "logic", "boundary", "syntax", "expression", "debugging"}
+_ALLOWED_REVIEW_STATUS = {"pending", "reviewing", "mastered"}
+_MASTERED_REVIEW_POINTS = 2
 _TYPE_ALIASES = {
     "概念": "concept",
     "概念理解": "concept",
@@ -337,7 +339,11 @@ def _classify_full_record(question: str, user_answer: str, reference_answer: str
 def list_mistakes(user_id: int | None = None) -> list[dict]:
     records = (
         MistakeRecord.query.filter(MistakeRecord.user_id == user_id)
-        .order_by(MistakeRecord.sort_order.asc(), MistakeRecord.created_at.desc())
+        .order_by(
+            (MistakeRecord.review_status == "mastered").asc(),
+            MistakeRecord.sort_order.asc(),
+            MistakeRecord.created_at.desc(),
+        )
         .all()
     )
     return [record.to_dict() for record in records]
@@ -506,6 +512,152 @@ def update_mistake_record(record_id: int, entry: dict, user_id: int | None = Non
 
     db.session.commit()
     return record.to_dict()
+
+
+def update_mistake_review(record_id: int, entry: dict, user_id: int | None = None) -> dict:
+    record = MistakeRecord.query.filter_by(id=record_id, user_id=user_id).first()
+
+    if not record:
+        raise ValueError("知识点记录不存在")
+
+    status = (entry.get("status") or record.review_status or "pending").strip()
+    review_note = (entry.get("reviewNote") or "").strip()
+
+    if status not in _ALLOWED_REVIEW_STATUS:
+        raise ValueError("status 只能是 pending、reviewing 或 mastered")
+
+    now = datetime.now(timezone.utc)
+    awarded_points = 0
+
+    record.review_status = status
+    record.review_note = review_note
+    record.reviewed_at = now
+    record.updated_at = now
+
+    if status == "mastered":
+        if not record.mastered_at:
+            record.mastered_at = now
+        if not record.review_points:
+            record.review_points = _MASTERED_REVIEW_POINTS
+            awarded_points = _MASTERED_REVIEW_POINTS
+            profile = _get_or_create_points_profile(user_id=user_id)
+            profile.total_points = (profile.total_points or 0) + awarded_points
+            profile.updated_at = now
+    elif status != "mastered":
+        record.mastered_at = None
+
+    db.session.commit()
+
+    total_points = _get_total_points(user_id=user_id)
+    return {
+        "record": record.to_dict(),
+        "awardedPoints": awarded_points,
+        "totalPoints": total_points,
+    }
+
+
+def generate_mistake_review_question(record_id: int, user_id: int | None = None) -> dict:
+    record = MistakeRecord.query.filter_by(id=record_id, user_id=user_id).first()
+
+    if not record:
+        raise ValueError("知识点记录不存在")
+
+    system_prompt = (
+        "你是一个编程教学助手。请根据薄弱点生成一个用于复盘的小测问题。"
+        "只返回 JSON，不要 Markdown，不要代码块。"
+        "JSON 格式为："
+        '{"question":"","hint":"","expectedAnswer":"","checkpoints":[""]}。'
+        "question 要具体、短小，适合学生用 2-5 句话回答。"
+        "hint 只给提示，不直接给答案。"
+        "expectedAnswer 给出简短判断标准，用自然语言说明应该答到哪些点。"
+        "expectedAnswer 不要输出完整代码；如需代码，只能给一行以内的关键写法。"
+        "checkpoints 最多 3 条，用于判断回答是否覆盖关键点。"
+    )
+    user_prompt = "\n".join(
+        [
+            "请为下面薄弱点生成复盘小测：",
+            f"主题：{record.topic}",
+            f"标题：{record.question}",
+            f"说明：{record.reference_answer}",
+            f"易错点：{record.mistake_reason}",
+            f"建议：{record.improvement_suggestion}",
+        ]
+    )
+
+    try:
+        raw_reply = generate_reply(system_prompt=system_prompt, user_prompt=user_prompt)
+        payload = _extract_json(raw_reply)
+        return _normalize_review_question(payload, record)
+    except Exception as error:
+        print("[mistake-review] question fallback", {"recordId": record_id, "detail": str(error)})
+        return _build_fallback_review_question(record)
+
+
+def _normalize_review_question(payload: dict, record: MistakeRecord) -> dict:
+    checkpoints = payload.get("checkpoints") if isinstance(payload.get("checkpoints"), list) else []
+
+    return {
+        "question": _compact_text(str(payload.get("question", "")).strip(), 120)
+        or _build_fallback_review_question(record)["question"],
+        "hint": _compact_text(str(payload.get("hint", "")).strip(), 120)
+        or _build_fallback_review_question(record)["hint"],
+        "expectedAnswer": _compact_text(str(payload.get("expectedAnswer", "")).strip(), 180)
+        or _build_fallback_review_question(record)["expectedAnswer"],
+        "checkpoints": [_compact_text(str(item), 70) for item in checkpoints[:3] if str(item).strip()]
+        or _build_fallback_review_question(record)["checkpoints"],
+    }
+
+
+def _build_fallback_review_question(record: MistakeRecord) -> dict:
+    return {
+        "question": f"请用自己的话说明：{record.question} 的关键点是什么？",
+        "hint": "先说概念，再说常见使用场景，最后补一个容易出错的地方。",
+        "expectedAnswer": _build_review_expected_answer(record),
+        "checkpoints": [
+            "能说清核心概念",
+            "能指出一个易错点",
+            "能给出一个最小例子或使用场景",
+        ],
+    }
+
+
+def _build_review_expected_answer(record: MistakeRecord) -> str:
+    parts = [
+        _compact_text(record.reference_answer or "", 72),
+        _compact_text(record.mistake_reason or "", 72),
+    ]
+    text = "；".join(part for part in parts if part)
+    if not text:
+        text = "回答应覆盖核心概念、适用场景和一个常见易错点。"
+    return f"参考要点：{text}"
+
+
+def _get_or_create_points_profile(user_id: int | None = None) -> UserProfile:
+    profile = UserProfile.query.filter(UserProfile.user_id == user_id).order_by(UserProfile.id.asc()).first()
+
+    if profile:
+        return profile
+
+    now = datetime.now(timezone.utc)
+    profile = UserProfile(
+        user_id=user_id,
+        nickname="学习者",
+        level="初级",
+        focus="C语言",
+        goal="课程学习",
+        answer_style="简洁直接",
+        weak_preference="自动记录",
+        total_points=0,
+        created_at=now,
+        updated_at=now,
+    )
+    db.session.add(profile)
+    return profile
+
+
+def _get_total_points(user_id: int | None = None) -> int:
+    profile = UserProfile.query.filter(UserProfile.user_id == user_id).order_by(UserProfile.id.asc()).first()
+    return int(profile.total_points or 0) if profile else 0
 
 
 def move_mistake_record(record_id: int, direction: str, user_id: int | None = None) -> list[dict]:

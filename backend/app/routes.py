@@ -10,10 +10,12 @@ from .services.mistake_service import (
     create_mistake_record,
     create_mistakes_from_assistant,
     delete_mistake_record,
+    generate_mistake_review_question,
     list_mistakes,
     move_mistake_record,
     reorder_mistake_records,
     update_mistake_record,
+    update_mistake_review,
 )
 from .services.mode_service import build_fallback_reply, get_mode_by_key, list_modes
 from .services.prompt_service import build_prompts
@@ -348,6 +350,30 @@ def update_mistake(record_id: int):
         return jsonify({"ok": False, "message": str(error)}), 400
 
     return jsonify({"ok": True, "data": record})
+
+
+@api_bp.route("/mistakes/<int:record_id>/review", methods=["PUT"])
+def update_mistake_review_status(record_id: int):
+    body = request.get_json(silent=True) or {}
+
+    try:
+        result = update_mistake_review(record_id=record_id, entry=body, user_id=_current_user_id())
+    except ValueError as error:
+        return jsonify({"ok": False, "message": str(error)}), 400
+
+    return jsonify({"ok": True, "data": result})
+
+
+@api_bp.route("/mistakes/<int:record_id>/review-question", methods=["POST"])
+def create_mistake_review_question(record_id: int):
+    try:
+        question = generate_mistake_review_question(record_id=record_id, user_id=_current_user_id())
+    except ValueError as error:
+        return jsonify({"ok": False, "message": str(error)}), 404
+    except Exception as error:
+        return jsonify({"ok": False, "message": "复盘问题生成失败", "detail": str(error)}), 502
+
+    return jsonify({"ok": True, "data": question})
 
 
 @api_bp.route("/mistakes/<int:record_id>/move", methods=["POST"])

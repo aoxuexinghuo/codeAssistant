@@ -5,8 +5,10 @@ import {
   createMistakeEntry,
   deleteMistakeEntry,
   fetchMistakes,
+  generateMistakeReviewQuestion,
   reorderMistakeEntries,
   updateMistakeEntry,
+  updateMistakeReview,
 } from '../services/api/assistant'
 
 const savedState = loadPageState('mistakes', {
@@ -21,9 +23,15 @@ const reordering = ref(false)
 const draggingId = ref(null)
 const createVisible = ref(false)
 const editVisible = ref(false)
+const reviewVisible = ref(false)
 const editingId = ref(null)
+const reviewingId = ref(null)
 const submitting = ref(false)
 const updating = ref(false)
+const reviewing = ref(false)
+const generatingQuestion = ref(false)
+const reviewQuestion = ref(null)
+const reviewQuestionCache = ref({})
 const errorMessage = ref('')
 const successMessage = ref('')
 const searchKeyword = ref(savedState.searchKeyword)
@@ -45,6 +53,11 @@ const editForm = reactive({
   mistakeType: 'concept',
 })
 
+const reviewForm = reactive({
+  status: 'reviewing',
+  answer: '',
+})
+
 const typeLabels = {
   concept: '概念',
   logic: '逻辑',
@@ -52,6 +65,12 @@ const typeLabels = {
   syntax: '语法',
   expression: '表达',
   debugging: '排查',
+}
+
+const reviewStatusLabels = {
+  pending: '待复盘',
+  reviewing: '复盘中',
+  mastered: '已掌握',
 }
 
 const totalCount = computed(() => mistakes.value.length)
@@ -77,6 +96,19 @@ const filteredMistakes = computed(() => {
     return keywordMatched && topicMatched && typeMatched
   })
 })
+
+function sortMistakes(items) {
+  return [...items].sort((a, b) => {
+    const masteredA = a.reviewStatus === 'mastered' ? 1 : 0
+    const masteredB = b.reviewStatus === 'mastered' ? 1 : 0
+
+    if (masteredA !== masteredB) {
+      return masteredA - masteredB
+    }
+
+    return (a.sortOrder || 0) - (b.sortOrder || 0)
+  })
+}
 
 function buildCardSummary(item) {
   const parts = [item.referenceAnswer, item.mistakeReason, item.improvementSuggestion]
@@ -112,7 +144,7 @@ async function loadMistakes() {
   loading.value = true
 
   try {
-    mistakes.value = await fetchMistakes()
+    mistakes.value = sortMistakes(await fetchMistakes())
   } catch (error) {
     errorMessage.value = error.message
   } finally {
@@ -131,7 +163,7 @@ async function handleCreate() {
       note: form.note.trim(),
     })
 
-    mistakes.value = [...mistakes.value, record].sort((a, b) => a.sortOrder - b.sortOrder)
+    mistakes.value = sortMistakes([...mistakes.value, record])
     createVisible.value = false
     form.question = ''
     form.note = ''
@@ -175,6 +207,62 @@ function closeEditModal() {
   errorMessage.value = ''
 }
 
+async function openReviewModal(item) {
+  reviewingId.value = item.id
+  reviewForm.status = item.reviewStatus === 'mastered' ? 'mastered' : 'reviewing'
+  reviewForm.answer = item.reviewNote || ''
+  reviewQuestion.value = reviewQuestionCache.value[item.id] || null
+  reviewVisible.value = true
+  errorMessage.value = ''
+
+  if (!reviewQuestion.value) {
+    await loadReviewQuestion(item.id)
+  }
+}
+
+function closeReviewModal() {
+  reviewVisible.value = false
+  reviewingId.value = null
+  reviewQuestion.value = null
+  errorMessage.value = ''
+}
+
+async function loadReviewQuestion(id = reviewingId.value, force = false) {
+  if (!id) {
+    return
+  }
+
+  if (!force && reviewQuestionCache.value[id]) {
+    reviewQuestion.value = reviewQuestionCache.value[id]
+    return
+  }
+
+  generatingQuestion.value = true
+  errorMessage.value = ''
+
+  try {
+    reviewQuestion.value = await generateMistakeReviewQuestion(id)
+    reviewQuestionCache.value = {
+      ...reviewQuestionCache.value,
+      [id]: reviewQuestion.value,
+    }
+  } catch (error) {
+    errorMessage.value = error.message
+    reviewQuestion.value = {
+      question: '请用自己的话说明这个知识点的关键结论。',
+      hint: '先说概念，再说易错点，最后补一个最小例子。',
+      expectedAnswer: '',
+      checkpoints: ['能说清核心概念', '能指出一个易错点', '能给出一个最小例子'],
+    }
+    reviewQuestionCache.value = {
+      ...reviewQuestionCache.value,
+      [id]: reviewQuestion.value,
+    }
+  } finally {
+    generatingQuestion.value = false
+  }
+}
+
 async function handleUpdate() {
   if (!editingId.value) {
     return
@@ -192,13 +280,37 @@ async function handleUpdate() {
       mistakeType: editForm.mistakeType,
     })
 
-    mistakes.value = mistakes.value.map((item) => (item.id === record.id ? record : item))
+    mistakes.value = sortMistakes(mistakes.value.map((item) => (item.id === record.id ? record : item)))
     closeEditModal()
     showSuccess('已更新知识卡片')
   } catch (error) {
     errorMessage.value = error.message
   } finally {
     updating.value = false
+  }
+}
+
+async function handleReviewUpdate(nextStatus = reviewForm.status) {
+  if (!reviewingId.value) {
+    return
+  }
+
+  reviewing.value = true
+  errorMessage.value = ''
+
+  try {
+    const result = await updateMistakeReview(reviewingId.value, {
+      status: nextStatus,
+      reviewNote: reviewForm.answer.trim(),
+    })
+    const record = result.record || result
+    mistakes.value = sortMistakes(mistakes.value.map((item) => (item.id === record.id ? record : item)))
+    closeReviewModal()
+    showSuccess(result.awardedPoints ? `已标记掌握，获得 ${result.awardedPoints} 积分` : '复盘记录已保存')
+  } catch (error) {
+    errorMessage.value = error.message
+  } finally {
+    reviewing.value = false
   }
 }
 
@@ -256,6 +368,10 @@ function typeLabel(type) {
   return typeLabels[type] || type
 }
 
+function reviewStatusLabel(status) {
+  return reviewStatusLabels[status] || '待复盘'
+}
+
 onMounted(() => {
   loadMistakes()
 })
@@ -311,7 +427,7 @@ watch([searchKeyword, topicFilter, typeFilter], () => {
           v-for="item in filteredMistakes"
           :key="item.id"
           class="mistake-card"
-          :class="{ 'is-dragging': draggingId === item.id }"
+          :class="{ 'is-dragging': draggingId === item.id, 'is-mastered': item.reviewStatus === 'mastered' }"
           @dragover="handleDragOver"
           @drop="handleDrop(item.id)"
         >
@@ -331,9 +447,15 @@ watch([searchKeyword, topicFilter, typeFilter], () => {
               <div class="mistake-badges">
                 <span class="row-tag">{{ item.topic }}</span>
                 <span class="topic-pill">{{ typeLabel(item.mistakeType) }}</span>
+                <span class="review-status-pill" :class="`is-${item.reviewStatus || 'pending'}`">
+                  {{ reviewStatusLabel(item.reviewStatus) }}
+                </span>
               </div>
             </div>
             <div class="mistake-actions">
+              <button class="icon-btn review-icon-btn" type="button" title="AI 复盘" @click="openReviewModal(item)">
+                练
+              </button>
               <button class="icon-btn" type="button" title="编辑记录" @click="openEditModal(item)">
                 ✎
               </button>
@@ -353,6 +475,7 @@ watch([searchKeyword, topicFilter, typeFilter], () => {
             <strong>{{ item.question }}</strong>
             <p>{{ buildCardSummary(item) }}</p>
             <p v-if="buildCardNote(item)" class="mistake-note">{{ buildCardNote(item) }}</p>
+            <p v-if="item.reviewNote" class="mistake-review-note">复盘：{{ item.reviewNote }}</p>
           </div>
         </article>
       </div>
@@ -398,6 +521,69 @@ watch([searchKeyword, topicFilter, typeFilter], () => {
                 {{ submitting ? '生成中...' : '保存' }}
               </button>
               <button class="ghost-btn" type="button" @click="closeCreateModal">取消</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </transition>
+
+    <transition name="history-fade">
+      <div v-if="reviewVisible" class="history-overlay" @click.self="closeReviewModal">
+        <section class="history-drawer review-modal">
+          <div class="review-modal-hero">
+            <div>
+              <span>AI 复盘</span>
+              <h3>回答一个小问题，确认是否真的掌握</h3>
+              <p>系统会根据这张薄弱点卡片生成一道短问题。完成作答后标记掌握，可获得 2 积分。</p>
+            </div>
+            <button class="ghost-btn" type="button" @click="closeReviewModal">关闭</button>
+          </div>
+
+          <div class="review-question-card">
+            <div class="review-question-head">
+              <span>{{ generatingQuestion ? '生成中' : '复盘题' }}</span>
+              <button class="ghost-btn compact-btn" type="button" :disabled="generatingQuestion" @click="loadReviewQuestion(reviewingId, true)">
+                换一题
+              </button>
+            </div>
+
+            <div v-if="generatingQuestion" class="review-skeleton">
+              <i></i>
+              <i></i>
+              <i></i>
+            </div>
+
+            <template v-else>
+              <strong>{{ reviewQuestion?.question }}</strong>
+              <p>{{ reviewQuestion?.hint }}</p>
+              <div v-if="reviewQuestion?.checkpoints?.length" class="review-checkpoints">
+                <span v-for="point in reviewQuestion.checkpoints" :key="point">{{ point }}</span>
+              </div>
+            </template>
+          </div>
+
+          <form class="review-answer-panel" @submit.prevent="handleReviewUpdate()">
+            <label>
+              <span>我的回答</span>
+              <textarea
+                v-model="reviewForm.answer"
+                rows="5"
+                placeholder="不用写很长。用自己的话答出关键点、易错点或一个最小例子即可。"
+              ></textarea>
+            </label>
+
+            <details v-if="reviewQuestion?.expectedAnswer" class="review-reference">
+              <summary>查看参考答案</summary>
+              <p>{{ reviewQuestion.expectedAnswer }}</p>
+            </details>
+
+            <div class="review-action-row">
+              <button class="primary-btn" type="button" :disabled="reviewing" @click="handleReviewUpdate('mastered')">
+                {{ reviewing ? '保存中...' : '标记掌握 +2 积分' }}
+              </button>
+              <button class="ghost-btn" type="button" :disabled="reviewing" @click="handleReviewUpdate('reviewing')">
+                {{ reviewing ? '保存中...' : '保存当前复盘' }}
+              </button>
             </div>
           </form>
         </section>

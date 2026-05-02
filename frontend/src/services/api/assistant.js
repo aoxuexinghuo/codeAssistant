@@ -184,6 +184,14 @@ export function updateMistakeEntry(id, payload) {
   return apiClient.put(`/api/mistakes/${id}`, payload)
 }
 
+export function updateMistakeReview(id, payload) {
+  return apiClient.put(`/api/mistakes/${id}/review`, payload)
+}
+
+export function generateMistakeReviewQuestion(id) {
+  return apiClient.post(`/api/mistakes/${id}/review-question`, {})
+}
+
 export function moveMistakeEntry(id, direction) {
   return apiClient.post(`/api/mistakes/${id}/move`, { direction })
 }

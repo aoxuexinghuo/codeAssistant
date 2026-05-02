@@ -98,6 +98,14 @@ def build_profile_insights(user_id: int | None = None) -> dict:
     profile = get_or_create_profile(user_id=user_id)
     question_count = ConversationHistory.query.filter(ConversationHistory.user_id == user_id).count()
     mistake_count = MistakeRecord.query.filter(MistakeRecord.user_id == user_id).count()
+    mastered_count = MistakeRecord.query.filter(
+        MistakeRecord.user_id == user_id,
+        MistakeRecord.review_status == "mastered",
+    ).count()
+    pending_review_count = MistakeRecord.query.filter(
+        MistakeRecord.user_id == user_id,
+        MistakeRecord.review_status != "mastered",
+    ).count()
 
     topic_distribution = _build_topic_distribution(user_id=user_id)
     mode_distribution = _build_mode_distribution(user_id=user_id)
@@ -109,6 +117,7 @@ def build_profile_insights(user_id: int | None = None) -> dict:
             "type": record.mistake_type,
         }
         for record in MistakeRecord.query.filter(MistakeRecord.user_id == user_id)
+        .filter(MistakeRecord.review_status != "mastered")
         .order_by(MistakeRecord.created_at.desc())
         .limit(5)
         .all()
@@ -117,6 +126,8 @@ def build_profile_insights(user_id: int | None = None) -> dict:
     return {
         "questionCount": question_count,
         "mistakeCount": mistake_count,
+        "masteredMistakeCount": mastered_count,
+        "pendingReviewCount": pending_review_count,
         "topicDistribution": topic_distribution,
         "modeDistribution": mode_distribution,
         "recentWeakPoints": recent_weak_points,

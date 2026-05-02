@@ -11,6 +11,11 @@ def ensure_lightweight_migrations() -> None:
     _add_column_if_missing(inspector, "user_profile", "total_points", "INTEGER DEFAULT 0")
     _add_column_if_missing(inspector, "conversation_history", "user_id", "INTEGER")
     _add_column_if_missing(inspector, "mistake_records", "user_id", "INTEGER")
+    _add_column_if_missing(inspector, "mistake_records", "review_status", "VARCHAR(32) DEFAULT 'pending'")
+    _add_column_if_missing(inspector, "mistake_records", "review_note", "TEXT DEFAULT ''")
+    _add_column_if_missing(inspector, "mistake_records", "review_points", "INTEGER DEFAULT 0")
+    _add_column_if_missing(inspector, "mistake_records", "reviewed_at", "DATETIME")
+    _add_column_if_missing(inspector, "mistake_records", "mastered_at", "DATETIME")
 
 
 def _add_column_if_missing(inspector, table_name: str, column_name: str, column_type: str) -> None:
