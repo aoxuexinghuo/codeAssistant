@@ -1,7 +1,8 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import {
   deleteStudyPlan,
+  fetchMistakes,
   fetchStudyPlans,
   generateStudyPlanSummary,
   updateStudyPlanStep,
@@ -33,8 +34,31 @@ const entries = [
 
 const studyPlans = ref([])
 const loadingPlan = ref(true)
+const weakPoints = ref([])
+const loadingWeakPoints = ref(true)
 const summarizingPlanId = ref(null)
 const pointsToast = ref('')
+
+const typeLabels = {
+  concept: '概念',
+  logic: '逻辑',
+  boundary: '边界',
+  syntax: '语法',
+  expression: '表达',
+  debugging: '调试',
+}
+
+const todayWeakPoints = computed(() => {
+  const today = new Date().toDateString()
+  return weakPoints.value.filter((item) => item.createdAt && new Date(item.createdAt).toDateString() === today)
+})
+
+const visibleWeakPoints = computed(() => {
+  const source = todayWeakPoints.value.length ? todayWeakPoints.value : weakPoints.value
+  return source.slice(0, 3)
+})
+
+const weakPanelTitle = computed(() => (todayWeakPoints.value.length ? '今日薄弱点' : '最近需要复盘'))
 
 async function loadStudyPlans() {
   loadingPlan.value = true
@@ -45,6 +69,24 @@ async function loadStudyPlans() {
     studyPlans.value = []
   } finally {
     loadingPlan.value = false
+  }
+}
+
+async function loadWeakPoints() {
+  loadingWeakPoints.value = true
+
+  try {
+    const records = await fetchMistakes()
+    weakPoints.value = [...records].sort((a, b) => {
+      const timeA = new Date(a.createdAt || 0).getTime()
+      const timeB = new Date(b.createdAt || 0).getTime()
+      return timeB - timeA
+    })
+  } catch (error) {
+    console.error('[home-weak-points] load failed', error)
+    weakPoints.value = []
+  } finally {
+    loadingWeakPoints.value = false
   }
 }
 
@@ -81,6 +123,14 @@ function planProgress(plan) {
   return plan?.plan?.progress || { total: 0, completed: 0, percent: 0 }
 }
 
+function typeLabel(type) {
+  return typeLabels[type] || '知识点'
+}
+
+function weakSummary(item) {
+  return item.referenceAnswer || item.mistakeReason || item.improvementSuggestion || '建议回看本轮问答，补一个最小示例。'
+}
+
 async function handleGenerateSummary(id) {
   summarizingPlanId.value = id
 
@@ -96,6 +146,7 @@ async function handleGenerateSummary(id) {
 
 onMounted(() => {
   loadStudyPlans()
+  loadWeakPoints()
 })
 </script>
 
@@ -103,17 +154,41 @@ onMounted(() => {
   <section class="page-stack home-page">
     <header class="page-hero compact-hero home-hero">
       <div>
-        <div class="badge">Home</div>
         <h2>编程学习助手</h2>
         <p class="panel-desc">用答疑、薄弱点记录和资料入口组织你的学习过程。</p>
       </div>
       <RouterLink to="/assistant" class="primary-link">开始答疑</RouterLink>
     </header>
 
+    <section class="home-weak-panel">
+      <div class="section-heading">
+        <div>
+          <h3>{{ weakPanelTitle }}</h3>
+        </div>
+        <RouterLink to="/mistakes" class="primary-link">查看全部</RouterLink>
+      </div>
+
+      <div v-if="visibleWeakPoints.length" class="home-weak-grid">
+        <RouterLink v-for="item in visibleWeakPoints" :key="item.id" to="/mistakes" class="home-weak-card interactive-card">
+          <div class="home-weak-card-head">
+            <span class="row-tag">{{ item.topic }}</span>
+            <span class="topic-pill">{{ typeLabel(item.mistakeType) }}</span>
+          </div>
+          <strong>{{ item.question }}</strong>
+          <p>{{ weakSummary(item) }}</p>
+          <span class="topic-action">去复盘 →</span>
+        </RouterLink>
+      </div>
+
+      <div v-else class="home-weak-empty">
+        <p>{{ loadingWeakPoints ? '正在读取薄弱点。' : '暂时没有需要复盘的薄弱点。' }}</p>
+        <RouterLink to="/assistant" class="text-link">去提一个问题</RouterLink>
+      </div>
+    </section>
+
     <section id="home-study-plans" class="home-study-panel">
       <div class="section-heading">
         <div>
-          <span class="badge">Plan</span>
           <h3>我的学习计划</h3>
         </div>
         <RouterLink to="/learning" class="primary-link">生成新计划</RouterLink>

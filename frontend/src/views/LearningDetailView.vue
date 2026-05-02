@@ -34,7 +34,6 @@ onMounted(() => {
   <section class="page-stack">
     <header class="page-hero compact-hero" v-if="resource">
       <div>
-        <div class="badge">Knowledge</div>
         <h2>{{ resource.title }}</h2>
         <p class="panel-desc">{{ resource.summary }}</p>
       </div>
@@ -43,7 +42,6 @@ onMounted(() => {
 
     <header class="page-hero compact-hero" v-else>
       <div>
-        <div class="badge">Knowledge</div>
         <h2>{{ loading ? '正在加载资料' : '资料不存在' }}</h2>
         <p class="panel-desc">{{ loading ? '请稍候。' : errorMessage || '未找到对应资料。' }}</p>
       </div>

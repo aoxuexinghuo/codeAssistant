@@ -273,7 +273,6 @@ watch([searchKeyword, topicFilter, typeFilter], () => {
   <section class="page-stack">
     <header class="page-hero compact-hero mistake-hero">
       <div>
-        <div class="badge">Review</div>
         <h2>薄弱点卡片</h2>
         <p class="panel-desc">把答疑中暴露出的知识点整理成可复盘的卡片。</p>
       </div>

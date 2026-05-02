@@ -75,7 +75,6 @@ function submit() {
       <aside class="history-drawer profile-drawer">
         <header class="history-head">
           <div>
-            <p class="badge">Profile</p>
             <h2>学习画像</h2>
             <p class="panel-desc">基础偏好由你设置，学习状态由系统根据历史和薄弱点统计。</p>
           </div>

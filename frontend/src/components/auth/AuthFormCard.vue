@@ -45,7 +45,6 @@ function handleSubmit() {
 <template>
   <section class="auth-card">
     <div>
-      <div class="badge">{{ isLogin ? 'Login' : 'Register' }}</div>
       <h2>{{ title }}</h2>
       <p class="subtitle">{{ subtitle }}</p>
     </div>

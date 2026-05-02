@@ -4,7 +4,7 @@ from flask import Blueprint, Response, jsonify, request, stream_with_context
 
 from .services.auth_service import get_user_by_token, login_user, register_user
 from .services.history_service import add_history_entry, clear_history, delete_history_entry, list_history
-from .services.knowledge_service import create_user_knowledge_item, get_knowledge_item, list_knowledge_items
+from .services.knowledge_service import create_user_knowledge_item, delete_user_knowledge_item, get_knowledge_item, list_knowledge_items
 from .services.llm_service import generate_reply, stream_reply
 from .services.mistake_service import (
     create_mistake_record,
@@ -118,6 +118,23 @@ def get_knowledge_detail(file_name: str):
         return jsonify({"ok": False, "message": str(error)}), 404
 
     return jsonify({"ok": True, "data": item})
+
+
+@api_bp.route("/knowledge/<path:file_name>", methods=["DELETE"])
+def delete_knowledge_detail(file_name: str):
+    user = _current_user()
+    if not user:
+        return jsonify({"ok": False, "message": "请先登录后再删除资料"}), 401
+
+    try:
+        delete_user_knowledge_item(user.id, file_name)
+        rebuild_rag_index()
+    except ValueError as error:
+        return jsonify({"ok": False, "message": str(error)}), 400
+    except Exception as error:
+        return jsonify({"ok": False, "message": "个人资料删除失败", "detail": str(error)}), 502
+
+    return jsonify({"ok": True, "data": {"file": file_name}})
 
 
 @api_bp.route("/study-plans", methods=["GET"])

@@ -12,7 +12,6 @@ defineEmits(['logout', 'toggle-history'])
 <template>
   <header class="assistant-header">
     <div class="header-copy">
-      <p class="badge">Assistant</p>
       <h1>智能答疑</h1>
     </div>
     <div class="assistant-actions">

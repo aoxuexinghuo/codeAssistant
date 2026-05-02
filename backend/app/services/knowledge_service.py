@@ -136,6 +136,25 @@ def create_user_knowledge_item(user_id: int, payload: dict) -> dict:
     return get_knowledge_item(file_name, user_id=user_id)
 
 
+def delete_user_knowledge_item(user_id: int, file_name: str) -> None:
+    safe_name = Path(file_name).name
+    user_dir = _user_knowledge_dir(user_id)
+
+    if user_dir is None:
+        raise ValueError("请先登录后再删除资料")
+
+    file_path = user_dir / safe_name
+
+    if not file_path.exists() or file_path.suffix.lower() != ".md":
+        raise ValueError("个人资料不存在")
+
+    # 只允许删除当前用户目录下的 Markdown 文件，避免误删系统知识库资料。
+    if file_path.resolve().parent != user_dir.resolve():
+        raise ValueError("无权删除该资料")
+
+    file_path.unlink()
+
+
 def _slugify(value: str) -> str:
     normalized = re.sub(r"[^\w\u4e00-\u9fff-]+", "-", value.lower(), flags=re.UNICODE)
     normalized = re.sub(r"-+", "-", normalized).strip("-")

@@ -60,7 +60,6 @@ function handleFileSelect(event) {
   <section class="page-stack">
     <header class="page-hero compact-hero upload-hero">
       <div>
-        <div class="badge">Upload</div>
         <h2>上传个人资料</h2>
         <p class="panel-desc">把自己的 Markdown 笔记加入个人知识库，答疑时也会参与检索。</p>
       </div>

@@ -20,7 +20,6 @@ const highlights = [
     <div class="brand-lockup">
       <span class="brand-mark">PA</span>
       <div>
-        <p class="badge">Programming Assistant</p>
         <h1>编程学习助手</h1>
       </div>
     </div>

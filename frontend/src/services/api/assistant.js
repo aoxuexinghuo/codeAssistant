@@ -40,6 +40,10 @@ export function uploadKnowledge(payload) {
   return apiClient.post('/api/knowledge', payload)
 }
 
+export function deleteKnowledge(fileName) {
+  return apiClient.delete(`/api/knowledge/${encodeURIComponent(fileName)}`)
+}
+
 export function fetchStudyPlans() {
   return apiClient.get('/api/study-plans')
 }

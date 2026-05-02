@@ -195,7 +195,6 @@ onMounted(() => {
   <section class="page-stack profile-page">
     <header class="page-hero profile-hero">
       <div>
-        <div class="badge">Profile</div>
         <h2>学习档案</h2>
         <p class="panel-desc">把你的学习偏好、近期状态和系统个性化策略集中展示。</p>
       </div>

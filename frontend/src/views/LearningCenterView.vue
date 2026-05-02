@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { fetchKnowledgeList, generateStudyPlan } from '../services/api/assistant'
+import { deleteKnowledge, fetchKnowledgeList, generateStudyPlan } from '../services/api/assistant'
 import { loadPageState, savePageState } from '../services/pageState'
 
 const savedState = loadPageState('learning-center', {
@@ -10,6 +10,7 @@ const savedState = loadPageState('learning-center', {
 const items = ref([])
 const loading = ref(true)
 const generatingPlan = ref(false)
+const deletingFile = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
 const activeTopic = ref(savedState.activeTopic)
@@ -74,6 +75,32 @@ async function handleGeneratePlan() {
   }
 }
 
+async function handleDeleteKnowledge(item) {
+  if (item.scope !== 'user' || deletingFile.value) {
+    return
+  }
+
+  const confirmed = window.confirm(`确定删除“${item.title}”吗？删除后该资料将不再参与知识库检索。`)
+  if (!confirmed) {
+    return
+  }
+
+  deletingFile.value = item.file
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  try {
+    await deleteKnowledge(item.file)
+    items.value = items.value.filter((record) => record.file !== item.file)
+    selectedFiles.value = selectedFiles.value.filter((file) => file !== item.file)
+    successMessage.value = '个人资料已删除。'
+  } catch (error) {
+    errorMessage.value = error.message
+  } finally {
+    deletingFile.value = ''
+  }
+}
+
 onMounted(() => {
   loadKnowledge()
 })
@@ -90,7 +117,6 @@ watch([activeTopic, selectedFiles], () => {
   <section class="page-stack">
     <header class="page-hero compact-hero">
       <div>
-        <div class="badge">Knowledge</div>
         <h2>知识库</h2>
         <p class="panel-desc">浏览本地 Markdown 知识库，答疑时也会检索同一批资料。</p>
       </div>
@@ -143,6 +169,16 @@ watch([activeTopic, selectedFiles], () => {
           @click.prevent="toggleSelected(item.file)"
         >
           {{ selectedFiles.includes(item.file) ? '✓' : '+' }}
+        </button>
+        <button
+          v-if="item.scope === 'user'"
+          class="delete-resource-btn"
+          type="button"
+          :disabled="deletingFile === item.file"
+          :title="deletingFile === item.file ? '正在删除' : '删除个人资料'"
+          @click.prevent="handleDeleteKnowledge(item)"
+        >
+          {{ deletingFile === item.file ? '…' : '×' }}
         </button>
         <div class="topic-initial">{{ initialOf(item.topic) }}</div>
         <div class="topic-content">
