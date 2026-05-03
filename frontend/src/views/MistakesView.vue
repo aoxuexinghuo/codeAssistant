@@ -5,6 +5,7 @@ import {
   createMistakeEntry,
   deleteMistakeEntry,
   fetchMistakes,
+  generateMistakeReviewComment,
   generateMistakeReviewQuestion,
   reorderMistakeEntries,
   updateMistakeEntry,
@@ -30,8 +31,11 @@ const submitting = ref(false)
 const updating = ref(false)
 const reviewing = ref(false)
 const generatingQuestion = ref(false)
+const commenting = ref(false)
 const reviewQuestion = ref(null)
 const reviewQuestionCache = ref({})
+const reviewAnswer = ref('')
+const commentResult = ref(null)
 const errorMessage = ref('')
 const successMessage = ref('')
 const searchKeyword = ref(savedState.searchKeyword)
@@ -51,11 +55,6 @@ const editForm = reactive({
   referenceAnswer: '',
   userAnswer: '',
   mistakeType: 'concept',
-})
-
-const reviewForm = reactive({
-  status: 'reviewing',
-  answer: '',
 })
 
 const typeLabels = {
@@ -209,8 +208,7 @@ function closeEditModal() {
 
 async function openReviewModal(item) {
   reviewingId.value = item.id
-  reviewForm.status = item.reviewStatus === 'mastered' ? 'mastered' : 'reviewing'
-  reviewForm.answer = item.reviewNote || ''
+  reviewAnswer.value = item.reviewNote || ''
   reviewQuestion.value = reviewQuestionCache.value[item.id] || null
   reviewVisible.value = true
   errorMessage.value = ''
@@ -224,6 +222,8 @@ function closeReviewModal() {
   reviewVisible.value = false
   reviewingId.value = null
   reviewQuestion.value = null
+  reviewAnswer.value = ''
+  commentResult.value = null
   errorMessage.value = ''
 }
 
@@ -253,10 +253,6 @@ async function loadReviewQuestion(id = reviewingId.value, force = false) {
       hint: '先说概念，再说易错点，最后补一个最小例子。',
       expectedAnswer: '',
       checkpoints: ['能说清核心概念', '能指出一个易错点', '能给出一个最小例子'],
-    }
-    reviewQuestionCache.value = {
-      ...reviewQuestionCache.value,
-      [id]: reviewQuestion.value,
     }
   } finally {
     generatingQuestion.value = false
@@ -290,7 +286,7 @@ async function handleUpdate() {
   }
 }
 
-async function handleReviewUpdate(nextStatus = reviewForm.status) {
+async function handleReviewUpdate(nextStatus) {
   if (!reviewingId.value) {
     return
   }
@@ -301,7 +297,7 @@ async function handleReviewUpdate(nextStatus = reviewForm.status) {
   try {
     const result = await updateMistakeReview(reviewingId.value, {
       status: nextStatus,
-      reviewNote: reviewForm.answer.trim(),
+      reviewNote: reviewAnswer.value.trim(),
     })
     const record = result.record || result
     mistakes.value = sortMistakes(mistakes.value.map((item) => (item.id === record.id ? record : item)))
@@ -311,6 +307,24 @@ async function handleReviewUpdate(nextStatus = reviewForm.status) {
     errorMessage.value = error.message
   } finally {
     reviewing.value = false
+  }
+}
+
+async function handleGenerateComment() {
+  if (!reviewingId.value) {
+    return
+  }
+
+  commenting.value = true
+  errorMessage.value = ''
+  commentResult.value = null
+
+  try {
+    commentResult.value = await generateMistakeReviewComment(reviewingId.value, reviewAnswer.value.trim())
+  } catch (error) {
+    errorMessage.value = error.message
+  } finally {
+    commenting.value = false
   }
 }
 
@@ -454,7 +468,7 @@ watch([searchKeyword, topicFilter, typeFilter], () => {
             </div>
             <div class="mistake-actions">
               <button class="icon-btn review-icon-btn" type="button" title="AI 复盘" @click="openReviewModal(item)">
-                练
+                复
               </button>
               <button class="icon-btn" type="button" title="编辑记录" @click="openEditModal(item)">
                 ✎
@@ -542,7 +556,12 @@ watch([searchKeyword, topicFilter, typeFilter], () => {
           <div class="review-question-card">
             <div class="review-question-head">
               <span>{{ generatingQuestion ? '生成中' : '复盘题' }}</span>
-              <button class="ghost-btn compact-btn" type="button" :disabled="generatingQuestion" @click="loadReviewQuestion(reviewingId, true)">
+              <button
+                class="ghost-btn compact-btn"
+                type="button"
+                :disabled="generatingQuestion"
+                @click="loadReviewQuestion(reviewingId, true)"
+              >
                 换一题
               </button>
             </div>
@@ -562,26 +581,37 @@ watch([searchKeyword, topicFilter, typeFilter], () => {
             </template>
           </div>
 
-          <form class="review-answer-panel" @submit.prevent="handleReviewUpdate()">
+          <form class="review-answer-panel" @submit.prevent="handleReviewUpdate('reviewing')">
             <label>
               <span>我的回答</span>
               <textarea
-                v-model="reviewForm.answer"
+                v-model="reviewAnswer"
                 rows="5"
-                placeholder="不用写很长。用自己的话答出关键点、易错点或一个最小例子即可。"
+                placeholder="用自己的话答出关键点、易错点或一个最小例子即可。"
               ></textarea>
             </label>
 
             <details v-if="reviewQuestion?.expectedAnswer" class="review-reference">
-              <summary>查看参考答案</summary>
+              <summary>查看参考要点</summary>
               <p>{{ reviewQuestion.expectedAnswer }}</p>
             </details>
 
+            <div v-if="commentResult" class="review-comment-result">
+              <strong>{{ commentResult.comment }}</strong>
+              <div v-if="commentResult.missing?.length">
+                <span v-for="item in commentResult.missing" :key="item">{{ item }}</span>
+              </div>
+              <p>{{ commentResult.suggestion }}</p>
+            </div>
+
             <div class="review-action-row">
+              <button class="ghost-btn" type="button" :disabled="commenting || !reviewAnswer.trim()" @click="handleGenerateComment">
+                {{ commenting ? '点评中...' : 'AI 点评' }}
+              </button>
               <button class="primary-btn" type="button" :disabled="reviewing" @click="handleReviewUpdate('mastered')">
                 {{ reviewing ? '保存中...' : '标记掌握 +2 积分' }}
               </button>
-              <button class="ghost-btn" type="button" :disabled="reviewing" @click="handleReviewUpdate('reviewing')">
+              <button class="ghost-btn" type="submit" :disabled="reviewing">
                 {{ reviewing ? '保存中...' : '保存当前复盘' }}
               </button>
             </div>

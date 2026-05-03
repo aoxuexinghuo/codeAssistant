@@ -547,12 +547,10 @@ def update_mistake_review(record_id: int, entry: dict, user_id: int | None = Non
         record.mastered_at = None
 
     db.session.commit()
-
-    total_points = _get_total_points(user_id=user_id)
     return {
         "record": record.to_dict(),
         "awardedPoints": awarded_points,
-        "totalPoints": total_points,
+        "totalPoints": _get_total_points(user_id=user_id),
     }
 
 
@@ -586,25 +584,22 @@ def generate_mistake_review_question(record_id: int, user_id: int | None = None)
 
     try:
         raw_reply = generate_reply(system_prompt=system_prompt, user_prompt=user_prompt)
-        payload = _extract_json(raw_reply)
-        return _normalize_review_question(payload, record)
+        return _normalize_review_question(_extract_json(raw_reply), record)
     except Exception as error:
         print("[mistake-review] question fallback", {"recordId": record_id, "detail": str(error)})
         return _build_fallback_review_question(record)
 
 
 def _normalize_review_question(payload: dict, record: MistakeRecord) -> dict:
+    fallback = _build_fallback_review_question(record)
     checkpoints = payload.get("checkpoints") if isinstance(payload.get("checkpoints"), list) else []
 
     return {
-        "question": _compact_text(str(payload.get("question", "")).strip(), 120)
-        or _build_fallback_review_question(record)["question"],
-        "hint": _compact_text(str(payload.get("hint", "")).strip(), 120)
-        or _build_fallback_review_question(record)["hint"],
-        "expectedAnswer": _compact_text(str(payload.get("expectedAnswer", "")).strip(), 180)
-        or _build_fallback_review_question(record)["expectedAnswer"],
+        "question": _compact_text(str(payload.get("question", "")).strip(), 120) or fallback["question"],
+        "hint": _compact_text(str(payload.get("hint", "")).strip(), 120) or fallback["hint"],
+        "expectedAnswer": _compact_text(str(payload.get("expectedAnswer", "")).strip(), 180) or fallback["expectedAnswer"],
         "checkpoints": [_compact_text(str(item), 70) for item in checkpoints[:3] if str(item).strip()]
-        or _build_fallback_review_question(record)["checkpoints"],
+        or fallback["checkpoints"],
     }
 
 
@@ -627,9 +622,68 @@ def _build_review_expected_answer(record: MistakeRecord) -> str:
         _compact_text(record.mistake_reason or "", 72),
     ]
     text = "；".join(part for part in parts if part)
-    if not text:
-        text = "回答应覆盖核心概念、适用场景和一个常见易错点。"
-    return f"参考要点：{text}"
+    return f"参考要点：{text or '回答应覆盖核心概念、适用场景和一个常见易错点。'}"
+
+
+def generate_mistake_review_comment(record_id: int, answer: str, user_id: int | None = None) -> dict:
+    record = MistakeRecord.query.filter_by(id=record_id, user_id=user_id).first()
+
+    if not record:
+        raise ValueError("知识点记录不存在")
+
+    if not answer.strip():
+        raise ValueError("answer 字段不能为空")
+
+    system_prompt = (
+        "你是一个编程学习复盘点评助手。"
+        "请根据薄弱点和用户回答给出简短点评。"
+        "只返回 JSON，不要 Markdown，不要代码块。"
+        "JSON 格式为："
+        '{"comment":"","missing":[""],"suggestion":""}。'
+        "comment 不超过 60 字，指出回答是否抓住重点。"
+        "missing 最多 2 条，指出还缺什么。"
+        "suggestion 不超过 60 字，给一个下一步改进建议。"
+        "不要打分，不要判定通过/不通过。"
+    )
+    user_prompt = "\n".join(
+        [
+            "薄弱点信息：",
+            f"主题：{record.topic}",
+            f"标题：{record.question}",
+            f"核心说明：{record.reference_answer}",
+            f"易错原因：{record.mistake_reason}",
+            "",
+            f"用户回答：{answer.strip()}",
+        ]
+    )
+
+    try:
+        raw_reply = generate_reply(system_prompt=system_prompt, user_prompt=user_prompt)
+        payload = _extract_json(raw_reply)
+        return _normalize_review_comment(payload)
+    except Exception as error:
+        print("[mistake-review-comment] fallback", {"recordId": record_id, "detail": str(error)})
+        return _build_fallback_review_comment(record)
+
+
+def _normalize_review_comment(payload: dict) -> dict:
+    missing = payload.get("missing") if isinstance(payload.get("missing"), list) else []
+
+    return {
+        "comment": _compact_text(str(payload.get("comment", "")).strip(), 80) or "回答已经开始覆盖核心点，但还可以更具体。",
+        "missing": [_compact_text(str(item), 48) for item in missing[:2] if str(item).strip()],
+        "suggestion": _compact_text(str(payload.get("suggestion", "")).strip(), 80) or "补一个最小例子，再用自己的话复述一次。",
+    }
+
+
+def _build_fallback_review_comment(record: MistakeRecord) -> dict:
+    return {
+        "comment": "回答可以继续围绕核心概念和易错点补充。",
+        "missing": [
+            _compact_text(record.mistake_reason or "易错原因还可以再说清楚。", 48),
+        ],
+        "suggestion": _compact_text(record.improvement_suggestion or "补一个最小例子，再复述关键结论。", 80),
+    }
 
 
 def _get_or_create_points_profile(user_id: int | None = None) -> UserProfile:

@@ -77,7 +77,7 @@ async function loadWeakPoints() {
 
   try {
     const records = await fetchMistakes()
-    weakPoints.value = records.filter((item) => item.reviewStatus !== 'mastered').sort((a, b) => {
+    weakPoints.value = [...records].sort((a, b) => {
       const timeA = new Date(a.createdAt || 0).getTime()
       const timeB = new Date(b.createdAt || 0).getTime()
       return timeB - timeA

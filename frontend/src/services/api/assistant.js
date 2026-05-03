@@ -192,6 +192,10 @@ export function generateMistakeReviewQuestion(id) {
   return apiClient.post(`/api/mistakes/${id}/review-question`, {})
 }
 
+export function generateMistakeReviewComment(id, answer) {
+  return apiClient.post(`/api/mistakes/${id}/review-comment`, { answer })
+}
+
 export function moveMistakeEntry(id, direction) {
   return apiClient.post(`/api/mistakes/${id}/move`, { direction })
 }

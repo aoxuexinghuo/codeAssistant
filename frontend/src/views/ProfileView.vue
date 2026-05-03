@@ -53,10 +53,10 @@ const statusCards = computed(() => [
     text: '来自会话历史',
   },
   {
-    label: '待复盘',
-    value: insights.value?.pendingReviewCount || 0,
+    label: '薄弱点',
+    value: insights.value?.mistakeCount || 0,
     unit: '条',
-    text: `已掌握 ${insights.value?.masteredMistakeCount || 0} 条`,
+    text: '来自知识点卡片',
   },
   {
     label: '进行中任务',

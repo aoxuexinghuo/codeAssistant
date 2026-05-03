@@ -10,6 +10,7 @@ from .services.mistake_service import (
     create_mistake_record,
     create_mistakes_from_assistant,
     delete_mistake_record,
+    generate_mistake_review_comment,
     generate_mistake_review_question,
     list_mistakes,
     move_mistake_record,
@@ -350,6 +351,21 @@ def update_mistake(record_id: int):
         return jsonify({"ok": False, "message": str(error)}), 400
 
     return jsonify({"ok": True, "data": record})
+
+
+@api_bp.route("/mistakes/<int:record_id>/review-comment", methods=["POST"])
+def create_mistake_review_comment(record_id: int):
+    body = request.get_json(silent=True) or {}
+    answer = (body.get("answer") or "").strip()
+
+    try:
+        comment = generate_mistake_review_comment(record_id=record_id, answer=answer, user_id=_current_user_id())
+    except ValueError as error:
+        return jsonify({"ok": False, "message": str(error)}), 400
+    except Exception as error:
+        return jsonify({"ok": False, "message": "复盘点评生成失败", "detail": str(error)}), 502
+
+    return jsonify({"ok": True, "data": comment})
 
 
 @api_bp.route("/mistakes/<int:record_id>/review", methods=["PUT"])
