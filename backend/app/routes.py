@@ -107,8 +107,11 @@ def upload_knowledge():
 
     try:
         item = create_user_knowledge_item(user.id, body)
+        rebuild_rag_index()
     except ValueError as error:
         return jsonify({"ok": False, "message": str(error)}), 400
+    except Exception as error:
+        return jsonify({"ok": False, "message": "个人资料上传成功，但知识库索引重建失败", "detail": str(error)}), 502
 
     return jsonify({"ok": True, "data": item}), 201
 

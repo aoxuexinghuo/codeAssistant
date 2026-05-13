@@ -1,7 +1,7 @@
 {
   "documents": [
     {
-      "id": "algorithm-complexity.md#1",
+      "id": "system:0:algorithm-complexity.md#1",
       "title": "算法复杂度",
       "file": "algorithm-complexity.md",
       "chunkIndex": 1,
@@ -14,6 +14,8 @@
         "时间复杂度",
         "空间复杂度"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "...",
         "arr",
@@ -199,7 +201,7 @@
       ]
     },
     {
-      "id": "algorithm-complexity.md#2",
+      "id": "system:0:algorithm-complexity.md#2",
       "title": "算法复杂度",
       "file": "algorithm-complexity.md",
       "chunkIndex": 2,
@@ -212,6 +214,8 @@
         "时间复杂度",
         "空间复杂度"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "log",
         "一个",
@@ -383,7 +387,7 @@
       ]
     },
     {
-      "id": "c-pointer.md#1",
+      "id": "system:0:c-pointer.md#1",
       "title": "C语言指针",
       "file": "c-pointer.md",
       "chunkIndex": 1,
@@ -397,6 +401,8 @@
         "数组",
         "函数参数"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "10",
         "100",
@@ -579,7 +585,7 @@
       ]
     },
     {
-      "id": "c-pointer.md#2",
+      "id": "system:0:c-pointer.md#2",
       "title": "C语言指针",
       "file": "c-pointer.md",
       "chunkIndex": 2,
@@ -593,6 +599,8 @@
         "数组",
         "函数参数"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "int",
         "null",
@@ -708,7 +716,7 @@
       ]
     },
     {
-      "id": "c-struct.md#1",
+      "id": "system:0:c-struct.md#1",
       "title": "C语言结构体",
       "file": "c-struct.md",
       "chunkIndex": 1,
@@ -721,6 +729,8 @@
         "自定义类型",
         "typedef"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "18",
         "20",
@@ -905,7 +915,7 @@
       ]
     },
     {
-      "id": "c-struct.md#2",
+      "id": "system:0:c-struct.md#2",
       "title": "C语言结构体",
       "file": "c-struct.md",
       "chunkIndex": 2,
@@ -918,6 +928,8 @@
         "自定义类型",
         "typedef"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "...",
         ".age",
@@ -1056,7 +1068,7 @@
       ]
     },
     {
-      "id": "go-channel.md#1",
+      "id": "system:0:go-channel.md#1",
       "title": "Go channel",
       "file": "go-channel.md",
       "chunkIndex": 1,
@@ -1069,6 +1081,8 @@
         "并发",
         "select"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "100",
         "ch",
@@ -1200,7 +1214,7 @@
       ]
     },
     {
-      "id": "go-channel.md#2",
+      "id": "system:0:go-channel.md#2",
       "title": "Go channel",
       "file": "go-channel.md",
       "chunkIndex": 2,
@@ -1213,6 +1227,8 @@
         "并发",
         "select"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "an",
         "case",
@@ -1373,7 +1389,7 @@
       ]
     },
     {
-      "id": "go-goroutine.md#1",
+      "id": "system:0:go-goroutine.md#1",
       "title": "Go goroutine",
       "file": "go-goroutine.md",
       "chunkIndex": 1,
@@ -1386,6 +1402,8 @@
         "WaitGroup",
         "channel"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "channel",
         "fmt.println",
@@ -1570,7 +1588,7 @@
       ]
     },
     {
-      "id": "go-goroutine.md#2",
+      "id": "system:0:go-goroutine.md#2",
       "title": "Go goroutine",
       "file": "go-goroutine.md",
       "chunkIndex": 2,
@@ -1583,6 +1601,8 @@
         "WaitGroup",
         "channel"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "ch",
         "chan",
@@ -1723,7 +1743,7 @@
       ]
     },
     {
-      "id": "go-goroutine.md#3",
+      "id": "system:0:go-goroutine.md#3",
       "title": "Go goroutine",
       "file": "go-goroutine.md",
       "chunkIndex": 3,
@@ -1736,6 +1756,8 @@
         "WaitGroup",
         "channel"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "channel",
         "go",
@@ -1864,7 +1886,7 @@
       ]
     },
     {
-      "id": "java-collections.md#1",
+      "id": "system:0:java-collections.md#1",
       "title": "Java 集合",
       "file": "java-collections.md",
       "chunkIndex": 1,
@@ -1878,6 +1900,8 @@
         "Map",
         "泛型"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "90",
         "arraylist",
@@ -1995,7 +2019,7 @@
       ]
     },
     {
-      "id": "java-collections.md#2",
+      "id": "system:0:java-collections.md#2",
       "title": "Java 集合",
       "file": "java-collections.md",
       "chunkIndex": 2,
@@ -2009,6 +2033,8 @@
         "Map",
         "泛型"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "arraylist",
         "equals",
@@ -2207,7 +2233,7 @@
       ]
     },
     {
-      "id": "java-collections.md#3",
+      "id": "system:0:java-collections.md#3",
       "title": "Java 集合",
       "file": "java-collections.md",
       "chunkIndex": 3,
@@ -2221,6 +2247,8 @@
         "Map",
         "泛型"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "arraylist",
         "hashmap",
@@ -2276,7 +2304,7 @@
       ]
     },
     {
-      "id": "java-oop.md#1",
+      "id": "system:0:java-oop.md#1",
       "title": "Java 面向对象",
       "file": "java-oop.md",
       "chunkIndex": 1,
@@ -2291,6 +2319,8 @@
         "继承",
         "多态"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "age",
         "class",
@@ -2446,7 +2476,7 @@
       ]
     },
     {
-      "id": "java-oop.md#2",
+      "id": "system:0:java-oop.md#2",
       "title": "Java 面向对象",
       "file": "java-oop.md",
       "chunkIndex": 2,
@@ -2461,6 +2491,8 @@
         "继承",
         "多态"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "animal",
         "class",
@@ -2653,7 +2685,7 @@
       ]
     },
     {
-      "id": "python-basics.md#1",
+      "id": "system:0:python-basics.md#1",
       "title": "Python 基础",
       "file": "python-basics.md",
       "chunkIndex": 1,
@@ -2667,6 +2699,8 @@
         "函数",
         "异常"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         ".py",
         "16",
@@ -2860,7 +2894,7 @@
       ]
     },
     {
-      "id": "python-basics.md#2",
+      "id": "system:0:python-basics.md#2",
       "title": "Python 基础",
       "file": "python-basics.md",
       "chunkIndex": 2,
@@ -2874,6 +2908,8 @@
         "函数",
         "异常"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         ".py",
         "16",
@@ -3049,7 +3085,7 @@
       ]
     },
     {
-      "id": "rust-ownership.md#1",
+      "id": "system:0:rust-ownership.md#1",
       "title": "Rust 所有权",
       "file": "rust-ownership.md",
       "chunkIndex": 1,
@@ -3062,6 +3098,8 @@
         "可变借用",
         "Copy"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "add",
         "copy",
@@ -3253,7 +3291,7 @@
       ]
     },
     {
-      "id": "rust-ownership.md#2",
+      "id": "system:0:rust-ownership.md#2",
       "title": "Rust 所有权",
       "file": "rust-ownership.md",
       "chunkIndex": 2,
@@ -3266,6 +3304,8 @@
         "可变借用",
         "Copy"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "add",
         "borrow",
@@ -3462,7 +3502,7 @@
       ]
     },
     {
-      "id": "rust-result.md#1",
+      "id": "system:0:rust-result.md#1",
       "title": "Rust Result 错误处理",
       "file": "rust-result.md",
       "chunkIndex": 1,
@@ -3476,6 +3516,8 @@
         "match",
         "unwrap"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "a.txt",
         "content",
@@ -3609,7 +3651,7 @@
       ]
     },
     {
-      "id": "rust-result.md#2",
+      "id": "system:0:rust-result.md#2",
       "title": "Rust Result 错误处理",
       "file": "rust-result.md",
       "chunkIndex": 2,
@@ -3623,6 +3665,8 @@
         "match",
         "unwrap"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "a.txt",
         "content",
@@ -3804,7 +3848,7 @@
       ]
     },
     {
-      "id": "vue-components.md#1",
+      "id": "system:0:vue-components.md#1",
       "title": "Vue 3 组件通信",
       "file": "vue-components.md",
       "chunkIndex": 1,
@@ -3819,6 +3863,8 @@
         "provide",
         "inject"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "const",
         "defineemits",
@@ -3971,7 +4017,7 @@
       ]
     },
     {
-      "id": "vue-components.md#2",
+      "id": "system:0:vue-components.md#2",
       "title": "Vue 3 组件通信",
       "file": "vue-components.md",
       "chunkIndex": 2,
@@ -3986,6 +4032,8 @@
         "provide",
         "inject"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "const",
         "el",
@@ -4152,7 +4200,7 @@
       ]
     },
     {
-      "id": "vue-reactivity.md#1",
+      "id": "system:0:vue-reactivity.md#1",
       "title": "Vue 3 响应式",
       "file": "vue-reactivity.md",
       "chunkIndex": 1,
@@ -4167,6 +4215,8 @@
         "watch",
         "watchEffect"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         ".value",
         "18",
@@ -4335,7 +4385,7 @@
       ]
     },
     {
-      "id": "vue-reactivity.md#2",
+      "id": "system:0:vue-reactivity.md#2",
       "title": "Vue 3 响应式",
       "file": "vue-reactivity.md",
       "chunkIndex": 2,
@@ -4350,6 +4400,8 @@
         "watch",
         "watchEffect"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         "computed",
         "console.log",
@@ -4500,7 +4552,7 @@
       ]
     },
     {
-      "id": "vue-reactivity.md#3",
+      "id": "system:0:vue-reactivity.md#3",
       "title": "Vue 3 响应式",
       "file": "vue-reactivity.md",
       "chunkIndex": 3,
@@ -4515,6 +4567,8 @@
         "watch",
         "watchEffect"
       ],
+      "scope": "system",
+      "userId": 0,
       "tokens": [
         ".value",
         "console.log",

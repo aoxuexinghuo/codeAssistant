@@ -1,76 +1,84 @@
 ﻿# 基于大模型的编程答疑助手
 
-一个面向编程学习场景的教学型答疑系统。项目以“编程答疑”为核心，结合 RAG 知识库、薄弱点沉淀、AI 复盘、学习计划、任务积分和用户画像，帮助学习者从一次提问延伸到持续复盘和个性化学习。
+一个面向编程学习场景的教学型答疑系统。项目以“编程答疑”为核心，结合 RAG 知识库增强、薄弱点沉淀、AI 复盘、学习计划、任务积分和用户画像，帮助学习者从一次提问延伸到持续复盘和个性化学习。
 
-当前项目已经拆分为 Vue 3 前端和 Flask 后端，后端使用 LangChain 调用 DeepSeek 等 OpenAI-compatible 大模型接口，并支持本地 Markdown 知识库检索。
+当前项目采用前后端分离架构：前端使用 Vue 3，后端使用 Flask + LangChain。RAG 模块已经升级为 `Chroma + Embedding` 向量检索方案，支持将本地 Markdown 知识库和用户上传资料切分为 chunk，调用 Embedding 模型生成向量，写入 Chroma 向量数据库，并在答疑时检索相关资料片段作为大模型回答上下文。
 
-## 功能总览
+## 一、核心功能
 
-### 智能答疑
+### 1. 智能答疑
 
 - 支持调试模式、学习模式、面试模式三种回答策略。
 - 支持普通大模型流式输出。
 - 支持 RAG 知识库增强流式输出。
-- 支持 Markdown 回答渲染，包括代码块、列表和标题。
+- 支持 Markdown 回答渲染，包括代码块、标题、列表等。
 - 支持会话历史记录。
 - 支持删除单条历史会话。
 - 支持自动沉淀薄弱点开关。
 - 支持显示薄弱点沉淀结果。
-- 支持展示 RAG 命中的资料来源。
-- RAG 来源可以跳转到知识库对应资料页。
+- 支持展示 RAG 命中的知识库来源。
+- RAG 来源可以点击跳转到对应知识库资料页。
 
-### 知识库
+### 2. RAG 知识库增强
 
-- 支持系统内置 Markdown 学习资料。
-- 支持当前用户上传个人 Markdown 资料。
-- 上传个人资料采用知识库页内弹窗，不再单独跳转页面。
-- 支持资料卡片浏览。
+- 使用 Markdown 文件作为本地知识库。
+- 支持系统知识库资料。
+- 支持用户上传个人 Markdown 资料。
+- 使用 chunk 切分知识库文档。
+- 使用 Embedding 模型将 chunk 和用户问题转换为向量。
+- 使用 Chroma 作为向量检索库。
+- 支持 Top-K 相似片段检索。
+- 支持相似度阈值过滤。
+- 支持用户资料隔离：用户只能检索系统资料和自己的个人资料。
+- 支持关键词检索作为异常兜底。
+
+### 3. 知识库
+
+- 展示系统内置学习资料。
+- 展示当前用户上传的个人资料。
+- 支持按主题筛选资料。
 - 支持 Markdown 详情阅读。
+- 支持在知识库页弹窗上传个人资料。
 - 支持删除当前用户上传的个人资料。
-- 支持勾选多项资料生成学习计划。
-- 支持关键词检索 RAG。
-- 支持可选的 Chroma + Embedding 向量检索。
+- 支持勾选资料生成学习计划。
 
-### 薄弱点记录
+### 4. 薄弱点记录
 
 - 支持从答疑过程中自动提炼薄弱知识点。
 - 支持手动新增薄弱点。
 - 支持编辑薄弱点。
 - 支持删除薄弱点。
-- 支持拖拽调整顺序。
+- 支持拖拽排序。
 - 支持搜索和筛选。
 - 支持复盘状态：待复盘、复盘中、已掌握。
 - 支持 AI 生成复盘问题。
 - 支持用户作答后由 AI 给出点评。
 - 支持保存复盘内容。
 - 支持标记掌握并获得复盘积分。
-- 已掌握的薄弱点会在展示时降低优先级。
 
-### 学习计划
+### 5. 学习计划与积分
 
-- 支持在知识库中勾选资料生成学习计划。
-- 支持结合用户画像、薄弱点和资料内容生成计划。
+- 支持从知识库勾选资料生成学习计划。
+- 支持结合用户画像、近期薄弱点和资料内容生成计划。
 - 支持首页展示学习计划。
 - 支持任务完成状态勾选。
 - 每个任务有 1 到 5 分的积分。
 - 首次完成任务时获得积分。
 - 已获得积分的任务不会重复加分。
 - 学习计划完成 100% 后可以生成阶段总结。
-- 支持删除已有学习计划。
 
-### 学习档案
+### 6. 学习档案与用户画像
 
 - 展示学习等级。
 - 展示升级进度。
-- 展示累计积分。
 - 展示提问数量、薄弱点数量、进行中任务和当前方向。
 - 展示下一步建议。
 - 展示薄弱点诊断。
 - 展示近期关注方向。
-- 展示个性化策略。
 - 支持维护个人偏好。
+- 用户画像会影响答疑提示词和学习计划生成。
 
-### 登录注册与用户隔离
+### 7. 登录注册与数据隔离
 
 - 支持用户注册。
 - 支持用户登录。
@@ -82,7 +90,7 @@
 - 学习档案按用户隔离。
 - 个人上传资料按用户隔离。
 
-## 技术栈
+## 二、技术栈
 
 ### 前端
 
@@ -106,17 +114,19 @@
 - langchain-chroma
 - Chroma
 - DeepSeek API
+- SiliconFlow Embedding API
 - OpenAI-compatible Chat API
+- OpenAI-compatible Embedding API
 
 ### 数据与检索
 
 - SQLite：保存用户、会话历史、薄弱点、学习计划和用户画像。
 - Markdown：保存系统知识库和用户上传资料。
-- 关键词索引：默认 RAG 检索方式。
-- Chroma：可选向量数据库。
-- Embedding 服务：仅在启用向量检索时需要。
+- Chroma：保存知识库 chunk 的向量表示。
+- Embedding 模型：将文档片段和用户问题编码为向量。
+- 关键词索引：作为向量检索异常时的兜底方案。
 
-## 项目结构
+## 三、项目结构
 
 ```text
 .
@@ -124,9 +134,9 @@
 │  ├─ app
 │  │  ├─ services
 │  │  │  ├─ auth_service.py              # 登录注册、token 生成与用户查询
-│  │  │  ├─ embedding_service.py         # Embedding 配置与客户端
+│  │  │  ├─ embedding_service.py         # 关键词兜底分词工具
 │  │  │  ├─ history_service.py           # 会话历史增删查
-│  │  │  ├─ knowledge_chunk_service.py   # 知识库文档切片
+│  │  │  ├─ knowledge_chunk_service.py   # Markdown 清洗与 chunk 切分
 │  │  │  ├─ knowledge_service.py         # Markdown 资料读取、上传、删除
 │  │  │  ├─ llm_service.py               # LangChain 大模型调用
 │  │  │  ├─ markdown_service.py          # Markdown 元数据解析
@@ -135,10 +145,10 @@
 │  │  │  ├─ profile_service.py           # 用户画像与学习档案
 │  │  │  ├─ prompt_service.py            # 提示词构建
 │  │  │  ├─ rag_service.py               # RAG 回答编排
-│  │  │  ├─ retriever_service.py         # 检索入口
+│  │  │  ├─ retriever_service.py         # 检索入口，优先 Chroma，失败回退关键词
 │  │  │  ├─ schema_service.py            # SQLite 轻量迁移
 │  │  │  ├─ study_plan_service.py        # 学习计划生成与任务积分
-│  │  │  └─ vector_store_service.py      # Chroma 向量库
+│  │  │  └─ vector_store_service.py      # Chroma 向量库构建与检索
 │  │  ├─ __init__.py                     # Flask 应用工厂
 │  │  ├─ config.py                       # 环境变量和目录配置
 │  │  ├─ extensions.py                   # Flask 扩展实例
@@ -146,8 +156,8 @@
 │  │  └─ routes.py                       # API 路由
 │  ├─ data                               # SQLite 数据库和关键词索引
 │  ├─ knowledge                          # 系统 Markdown 知识库
-│  ├─ user_knowledge                     # 用户上传的个人资料
-│  ├─ vector_store                       # Chroma 向量库目录
+│  ├─ user_knowledge                     # 用户上传个人资料
+│  ├─ vector_store                       # Chroma 向量数据库目录
 │  ├─ requirements.txt
 │  ├─ package.json
 │  └─ server.py
@@ -158,20 +168,17 @@
 │  │  │  ├─ auth                         # 登录注册组件
 │  │  │  ├─ common                       # 通用组件
 │  │  │  └─ layout                       # 全局布局
-│  │  ├─ data                            # 前端静态数据
 │  │  ├─ router                          # 路由配置
 │  │  ├─ services                        # API 请求与页面状态
 │  │  ├─ views                           # 页面视图
 │  │  ├─ App.vue
 │  │  ├─ main.js
 │  │  └─ style.css
-│  ├─ package.json
-│  └─ vite.config.js
 ├─ package.json
 └─ README.md
 ```
 
-## 环境要求
+## 四、环境要求
 
 建议版本：
 
@@ -183,10 +190,10 @@ Python >= 3.10
 说明：
 
 - Vite 7 推荐 Node.js `20.19+` 或 `22.12+`。
-- 如果 Node 版本较低，前端构建可能出现版本警告。
-- 后端当前使用 Python + Flask，不再使用 Node.js/Express 作为业务后端。
+- 后端当前使用 Python + Flask。
+- RAG 向量检索需要配置 Embedding API。
 
-## 安装依赖
+## 五、安装依赖
 
 在项目根目录安装前端依赖：
 
@@ -206,19 +213,71 @@ python -m pip install -r backend/requirements.txt
 npm --prefix frontend install
 ```
 
-## 环境变量配置
+## 六、环境变量配置
 
-### DeepSeek 最小配置
+### 1. DeepSeek 聊天模型配置
 
-项目默认使用 DeepSeek 的 OpenAI-compatible 接口。
-
-PowerShell 临时配置：
+DeepSeek 负责生成最终回答。PowerShell 临时配置如下：
 
 ```powershell
 $env:DEEPSEEK_API_KEY="你的 DeepSeek API Key"
 $env:LLM_BASE_URL="https://api.deepseek.com"
 $env:LLM_MODEL="deepseek-v4-flash"
-$env:RAG_RETRIEVER_TYPE="keyword"
+```
+
+后端读取聊天模型 Key 的优先级：
+
+```text
+LLM_API_KEY
+→ DEEPSEEK_API_KEY
+```
+
+因此也可以写成：
+
+```powershell
+$env:LLM_API_KEY="你的 DeepSeek API Key"
+```
+
+### 2. Embedding 向量模型配置
+
+Embedding 模型负责把知识库 chunk 和用户问题转换成向量。本项目推荐使用 SiliconFlow 的 `Qwen/Qwen3-Embedding-0.6B`。
+
+PowerShell 临时配置：
+
+```powershell
+$env:RAG_RETRIEVER_TYPE="vector"
+$env:EMBEDDING_API_KEY="你的 SiliconFlow API Key"
+$env:EMBEDDING_BASE_URL="https://api.siliconflow.cn/v1"
+$env:EMBEDDING_MODEL="Qwen/Qwen3-Embedding-0.6B"
+```
+
+说明：
+
+- `RAG_RETRIEVER_TYPE=vector` 表示使用 Chroma + Embedding 向量检索。
+- `EMBEDDING_API_KEY` 是 SiliconFlow 控制台创建的 API Key。
+- `EMBEDDING_BASE_URL` 是 OpenAI-compatible Embedding 接口地址。
+- `EMBEDDING_MODEL` 是实际使用的向量模型名称。
+- DeepSeek 聊天模型 Key 不等于 Embedding Key，两者用途不同。
+
+### 3. 完整启动前配置示例
+
+```powershell
+# 聊天模型：负责生成回答
+$env:DEEPSEEK_API_KEY="你的 DeepSeek API Key"
+$env:LLM_BASE_URL="https://api.deepseek.com"
+$env:LLM_MODEL="deepseek-v4-flash"
+
+# 向量模型：负责知识库向量化和问题向量化
+$env:RAG_RETRIEVER_TYPE="vector"
+$env:EMBEDDING_API_KEY="你的 SiliconFlow API Key"
+$env:EMBEDDING_BASE_URL="https://api.siliconflow.cn/v1"
+$env:EMBEDDING_MODEL="Qwen/Qwen3-Embedding-0.6B"
+
+# RAG 参数
+$env:RAG_TOP_K="3"
+$env:RAG_MIN_SCORE="0.25"
+$env:RAG_CHUNK_SIZE="500"
+$env:RAG_CHUNK_OVERLAP="80"
 ```
 
 然后在同一个 PowerShell 窗口启动后端：
@@ -227,43 +286,21 @@ $env:RAG_RETRIEVER_TYPE="keyword"
 npm run dev:backend
 ```
 
-PowerShell 永久配置：
+### 4. 永久环境变量配置
 
 ```powershell
 [Environment]::SetEnvironmentVariable("DEEPSEEK_API_KEY", "你的 DeepSeek API Key", "User")
 [Environment]::SetEnvironmentVariable("LLM_BASE_URL", "https://api.deepseek.com", "User")
 [Environment]::SetEnvironmentVariable("LLM_MODEL", "deepseek-v4-flash", "User")
-[Environment]::SetEnvironmentVariable("RAG_RETRIEVER_TYPE", "keyword", "User")
+[Environment]::SetEnvironmentVariable("RAG_RETRIEVER_TYPE", "vector", "User")
+[Environment]::SetEnvironmentVariable("EMBEDDING_API_KEY", "你的 SiliconFlow API Key", "User")
+[Environment]::SetEnvironmentVariable("EMBEDDING_BASE_URL", "https://api.siliconflow.cn/v1", "User")
+[Environment]::SetEnvironmentVariable("EMBEDDING_MODEL", "Qwen/Qwen3-Embedding-0.6B", "User")
 ```
 
 永久配置后需要关闭当前终端，重新打开 PowerShell 后再启动项目。
 
-### Key 读取优先级
-
-后端读取大模型 Key 的优先级：
-
-```text
-LLM_API_KEY
-→ DEEPSEEK_API_KEY
-```
-
-因此以下两种方式任选一种即可。
-
-方式一：
-
-```powershell
-$env:DEEPSEEK_API_KEY="你的 DeepSeek API Key"
-```
-
-方式二：
-
-```powershell
-$env:LLM_API_KEY="你的 DeepSeek API Key"
-```
-
-如果两个都配置，优先使用 `LLM_API_KEY`。
-
-### 常用可选配置
+### 5. 其他可选配置
 
 ```powershell
 $env:PORT="3000"
@@ -276,7 +313,7 @@ $env:RAG_CHUNK_SIZE="500"
 $env:RAG_CHUNK_OVERLAP="80"
 ```
 
-## 启动项目
+## 七、启动项目
 
 ### 1. 启动后端
 
@@ -316,20 +353,333 @@ http://localhost:5173
 frontend/vite.config.js
 ```
 
-## 常用命令
+## 八、RAG 增强实现说明
 
-```bash
-npm run dev:backend       # 启动 Flask 后端
-npm run dev:frontend      # 启动 Vue 前端
-npm run build             # 构建前端
-npm run build:frontend    # 构建前端
-npm run start:backend     # 启动 Flask 后端
-python -m compileall backend/app
+本节对应论文中 RAG 增强实现部分，可用于补充“知识库切分 chunk、Embedding 模型、向量检索库 Chroma 的具体配置说明”。
+
+### 1. RAG 总体流程
+
+```text
+Markdown 知识库
+→ 解析 Markdown 元数据
+→ 清洗 Markdown 格式
+→ 文本切分为 chunk
+→ 调用 Embedding 模型生成向量
+→ 写入 Chroma 向量数据库
+→ 用户提问
+→ 用户问题生成查询向量
+→ Chroma 相似度检索 Top-K 片段
+→ 过滤低相似度片段
+→ 拼接资料片段和用户问题
+→ 调用 DeepSeek 生成回答
+→ 返回回答和参考来源
 ```
 
-## 页面说明
+### 2. 知识库来源
 
-### 登录注册页
+系统知识库目录：
+
+```text
+backend/knowledge/*.md
+```
+
+用户上传资料目录：
+
+```text
+backend/user_knowledge/user_<用户ID>/*.md
+```
+
+知识库文件采用 Markdown 格式，建议在文件顶部添加元数据：
+
+```markdown
+---
+title: Vue 3 组件通信
+topic: Vue 3
+level: beginner
+tags: [props, emit, provide, inject]
+---
+
+# Vue 3 组件通信
+
+正文内容...
+```
+
+元数据用途：
+
+- 资料卡片展示。
+- RAG 来源展示。
+- Chroma metadata 存储。
+- 用户资料权限过滤。
+- 学习计划生成。
+
+### 3. 知识库切分 chunk
+
+代码位置：
+
+```text
+backend/app/services/knowledge_chunk_service.py
+```
+
+切分前会先对 Markdown 做清洗：
+
+- 移除代码块标记。
+- 移除行内代码反引号。
+- 移除 Markdown 标题符号。
+- 移除部分强调符号。
+- 合并多余空白字符。
+
+默认切分参数：
+
+```text
+RAG_CHUNK_SIZE=500
+RAG_CHUNK_OVERLAP=80
+```
+
+含义：
+
+- `RAG_CHUNK_SIZE=500`：每个知识片段默认约 500 个字符。
+- `RAG_CHUNK_OVERLAP=80`：相邻片段之间保留约 80 个字符重叠。
+
+设置 overlap 的原因是避免关键知识点刚好被切断。例如一个概念解释可能横跨两个片段，如果完全无重叠，检索时可能只召回其中一半信息。通过设置 80 字符重叠，可以提高片段语义连续性。
+
+每个 chunk 会保存以下字段：
+
+```text
+id          唯一标识，格式类似 system:0:vue-components.md#1
+title       资料标题
+file        来源文件名
+chunkIndex  当前片段编号
+content     切分后的文本内容
+topic       主题
+level       难度
+tags        标签
+scope       system 或 user
+userId      用户 ID，系统资料为 0
+```
+
+示例：
+
+```json
+{
+  "id": "system:0:vue-components.md#1",
+  "title": "Vue 3 组件通信",
+  "file": "vue-components.md",
+  "chunkIndex": 1,
+  "topic": "Vue 3",
+  "scope": "system",
+  "userId": 0
+}
+```
+
+### 4. Embedding 模型配置
+
+代码位置：
+
+```text
+backend/app/services/vector_store_service.py
+```
+
+本项目通过 LangChain 的 `OpenAIEmbeddings` 调用 OpenAI-compatible Embedding 接口。推荐配置：
+
+```powershell
+$env:EMBEDDING_BASE_URL="https://api.siliconflow.cn/v1"
+$env:EMBEDDING_MODEL="Qwen/Qwen3-Embedding-0.6B"
+```
+
+选择该模型的原因：
+
+- 适合中文、英文和代码混合文本检索。
+- 延迟较低，适合本地毕设演示。
+- 成本较低，适合作为轻量级 RAG 项目默认向量模型。
+- 使用 OpenAI-compatible 接口，便于与 LangChain 集成。
+
+Embedding 在系统中的两类用途：
+
+```text
+文档向量化：Markdown chunk → Embedding 模型 → 文档向量
+查询向量化：用户问题 → Embedding 模型 → 查询向量
+```
+
+### 5. Chroma 向量检索库配置
+
+代码位置：
+
+```text
+backend/app/services/vector_store_service.py
+```
+
+向量库存储目录：
+
+```text
+backend/vector_store
+```
+
+Chroma collection 名称：
+
+```text
+programming_assistant_knowledge
+```
+
+索引构建逻辑：
+
+```text
+读取系统知识库和所有用户上传资料
+→ 加载 Markdown 文档
+→ 切分 chunk
+→ 转换为 LangChain Document
+→ 将 chunk metadata 写入 Document metadata
+→ 调用 Embedding 模型生成向量
+→ 写入 Chroma 持久化目录 backend/vector_store
+```
+
+项目启动时会自动重建 RAG 索引。上传或删除个人资料后，也会重建索引，保证新增资料能够参与后续检索。
+
+### 6. 用户资料隔离
+
+Chroma 中同时保存系统资料和用户上传资料，因此必须做权限过滤。
+
+每个 chunk 的 metadata 中包含：
+
+```text
+scope: system 或 user
+userId: 用户 ID，系统资料为 0
+```
+
+检索规则：
+
+```text
+未登录用户：只允许检索 scope=system 的系统资料
+已登录用户：允许检索 scope=system 的系统资料 + userId=当前用户ID 的个人资料
+```
+
+这样可以避免用户 A 上传的个人资料被用户 B 检索到。
+
+### 7. 检索参数
+
+默认检索参数：
+
+```text
+RAG_TOP_K=3
+RAG_MIN_SCORE=0.25
+```
+
+含义：
+
+- `RAG_TOP_K=3`：默认返回相似度最高的 3 个知识片段。
+- `RAG_MIN_SCORE=0.25`：低于 0.25 的片段会被过滤。
+
+如果命中结果太少，可以适当降低阈值：
+
+```powershell
+$env:RAG_MIN_SCORE="0.2"
+```
+
+如果命中结果不够准确，可以适当提高阈值：
+
+```powershell
+$env:RAG_MIN_SCORE="0.35"
+```
+
+### 8. RAG Prompt 拼接
+
+代码位置：
+
+```text
+backend/app/services/rag_service.py
+```
+
+检索到资料后，系统会将资料片段拼接成上下文：
+
+```text
+[资料 1] Vue 3 组件通信 (vue-components.md)
+资料片段正文...
+
+[资料 2] ...
+资料片段正文...
+```
+
+随后和用户问题一起组成 Prompt：
+
+```text
+资料片段：
+<检索到的资料内容>
+
+用户问题：<用户问题>
+
+请给出简洁回答。
+```
+
+系统提示词要求模型：
+
+- 优先依据给定资料片段回答。
+- 如果资料中没有直接依据，需要说明资料库没有找到直接依据。
+- 回答控制在 150 字以内。
+- 不编造资料来源。
+- 结合用户画像中的水平、方向和回答偏好。
+
+### 9. 关键词检索兜底
+
+虽然当前主链路是 Chroma + Embedding，但项目仍保留关键词检索作为兜底。
+
+兜底触发场景：
+
+- Embedding API Key 未配置。
+- Embedding 服务不可访问。
+- Chroma 索引构建失败。
+- 向量检索过程异常。
+
+当向量检索失败时，后端会打印类似日志：
+
+```text
+[rag] vector search fallback
+```
+
+此时系统会退回关键词检索，避免 RAG 答疑功能完全不可用。
+
+### 10. 成功与失败判断
+
+成功日志示例：
+
+```text
+[rag] hit {'question': 'Vue3中，组件之间如何通信?', 'file': 'vue-components.md', 'title': 'Vue 3 组件通信', 'chunkIndex': 1, 'score': 0.4444}
+```
+
+说明：
+
+- RAG 检索成功。
+- 命中文件为 `vue-components.md`。
+- 命中第 1 个 chunk。
+- 相似度分数为 `0.4444`。
+
+失败或降级日志示例：
+
+```text
+[rag] vector search fallback
+```
+
+说明向量检索失败，系统正在回退到关键词检索。
+
+无命中日志示例：
+
+```text
+[rag] no hit {'question': 'xxx'}
+```
+
+说明 RAG 流程可用，但知识库中没有检索到满足阈值的相关片段。
+
+## 九、论文 5.3.2 可参考描述
+
+本系统的 RAG 增强模块采用“Markdown 知识库 + Embedding 向量化 + Chroma 向量检索库 + 大模型生成”的实现方式。系统首先读取 `backend/knowledge` 目录下的系统知识库文件以及当前用户上传的 Markdown 资料，解析文件顶部的元数据，包括标题、主题、难度和标签等信息。随后系统会对 Markdown 正文进行清洗，去除标题符号、代码块标记和多余空白，并按照固定窗口将文本切分为若干知识片段。默认每个 chunk 大小为 500 个字符，相邻 chunk 保留 80 个字符重叠，以减少知识点被切断导致的语义缺失。
+
+在向量化阶段，系统通过 LangChain 的 `OpenAIEmbeddings` 调用 OpenAI-compatible Embedding 接口。本文选用 SiliconFlow 提供的 `Qwen/Qwen3-Embedding-0.6B` 作为向量模型，将知识库 chunk 和用户问题编码为向量表示。该模型适合中文、英文和代码混合文本检索，并且延迟较低，适合教学型编程答疑系统的本地演示场景。
+
+向量检索库采用 Chroma。系统将每个 chunk 转换为 LangChain Document，并在 metadata 中保存 `title`、`file`、`chunkIndex`、`topic`、`tags`、`scope` 和 `userId` 等字段。Chroma 向量库存储目录为 `backend/vector_store`，collection 名称为 `programming_assistant_knowledge`。系统启动时会自动重建向量索引，用户上传或删除个人资料后也会重建索引，保证知识库内容与向量库保持一致。
+
+用户提问时，系统首先调用同一个 Embedding 模型将问题转换为查询向量，然后在 Chroma 中进行相似度检索。系统默认返回相似度最高的 3 个知识片段，并使用 0.25 作为最低相似度阈值。检索时会根据 metadata 进行权限过滤：未登录用户只能检索系统资料，登录用户可以检索系统资料和自己的个人资料。检索到的片段会被拼接为上下文，与用户问题一起输入大语言模型生成最终回答。通过这种方式，系统可以在回答中结合本地知识库内容，提高回答与课程资料和个人资料的一致性。
+
+## 十、页面说明
+
+### 1. 登录注册页
 
 路由：
 
@@ -343,7 +693,7 @@ python -m compileall backend/app
 - 用户注册。
 - 用户登录。
 - 登录成功后保存 token 和用户信息。
-- 未登录也可以使用部分公共能力，但个人资料上传等能力需要登录。
+- 需要登录后才能上传个人资料。
 
 前端本地保存：
 
@@ -358,15 +708,13 @@ programming-assistant-user
 X-User-Token: <token>
 ```
 
-### 首页
+### 2. 首页
 
 路由：
 
 ```text
 /home
 ```
-
-首页是学习任务执行入口。
 
 主要模块：
 
@@ -379,20 +727,7 @@ X-User-Token: <token>
 - 薄弱点记录入口。
 - 知识库入口。
 
-今日薄弱点逻辑：
-
-- 优先展示今天新增的薄弱点。
-- 如果今天没有新增，则展示最近待复盘的薄弱点。
-- 已掌握的薄弱点优先级较低。
-
-学习计划逻辑：
-
-- 从知识库勾选资料后生成。
-- 在首页执行计划。
-- 勾选任务完成后获得对应积分。
-- 计划完成 100% 后出现阶段总结入口。
-
-### 智能答疑页
+### 3. 智能答疑页
 
 路由：
 
@@ -408,7 +743,7 @@ X-User-Token: <token>
 面试模式：偏提示和思路，不直接堆完整代码。
 ```
 
-功能：
+主要功能：
 
 - 输入编程问题。
 - 切换答疑模式。
@@ -418,22 +753,9 @@ X-User-Token: <token>
 - 查看会话历史。
 - 删除单条历史。
 - 开关自动沉淀薄弱点。
-- 显示薄弱点沉淀成功、无沉淀、失败三种状态。
 - 显示 RAG 命中来源。
 
-自动沉淀薄弱点的流程：
-
-```text
-用户提问
-→ 大模型回答
-→ 前端根据开关请求后端提炼薄弱点
-→ 后端分析问题和回答
-→ 生成 0 条或多条薄弱点卡片
-→ 保存到当前用户账号
-→ 前端显示沉淀结果
-```
-
-### 知识库页
+### 4. 知识库页
 
 路由：
 
@@ -441,14 +763,7 @@ X-User-Token: <token>
 /learning
 ```
 
-说明：页面名称已经改为“知识库”，但内部路由仍沿用旧的 `learning` 路径。
-
-资料来源：
-
-```text
-backend/knowledge/*.md
-backend/user_knowledge/user_<用户ID>/*.md
-```
+说明：页面名称为“知识库”，内部路由仍沿用 `learning`。
 
 功能：
 
@@ -460,14 +775,7 @@ backend/user_knowledge/user_<用户ID>/*.md
 - 上传个人 Markdown 资料。
 - 删除个人上传资料。
 
-上传个人资料：
-
-- 在知识库页点击“上传个人资料”。
-- 页面会打开统一风格弹窗。
-- 可以选择 Markdown 文件，也可以直接粘贴 Markdown 内容。
-- 上传成功后资料进入当前用户的个人知识库。
-
-兼容路由：
+上传个人资料入口：
 
 ```text
 /learning/upload
@@ -475,27 +783,7 @@ backend/user_knowledge/user_<用户ID>/*.md
 
 访问该路由时会自动回到知识库页并打开上传弹窗。
 
-删除规则：
-
-- 只能删除当前用户上传的个人资料。
-- 系统内置资料不能删除。
-- 删除后会重建 RAG 索引，避免继续命中已删除资料。
-
-### 知识详情页
-
-路由：
-
-```text
-/learning/<file>
-```
-
-功能：
-
-- 查看 Markdown 资料内容。
-- 渲染标题、段落、列表和代码块。
-- 作为 RAG 来源跳转目标。
-
-### 薄弱点记录页
+### 5. 薄弱点记录页
 
 路由：
 
@@ -506,45 +794,22 @@ backend/user_knowledge/user_<用户ID>/*.md
 功能：
 
 - 查看薄弱点卡片。
-- 自动沉淀薄弱点。
 - 手动新增薄弱点。
 - 编辑薄弱点。
 - 删除薄弱点。
 - 拖拽排序。
-- 搜索薄弱点。
-- 按主题筛选。
-- 按类型筛选。
-- 打开 AI 复盘弹窗。
+- 搜索和筛选。
+- AI 复盘。
+- AI 点评。
+- 标记掌握并获得积分。
 
-薄弱点卡片内容更偏知识点展示，不强制要求都有“我的答案、参考答案、错误原因、改进建议”四项。
-
-AI 复盘流程：
-
-```text
-打开复盘
-→ AI 生成一个针对该薄弱点的问题
-→ 用户输入自己的回答
-→ 可请求 AI 点评
-→ 可保存复盘
-→ 可标记掌握
-→ 首次标记掌握获得 2 积分
-```
-
-复盘积分规则：
-
-- 每条薄弱点首次标记掌握获得 2 分。
-- 已获得复盘积分的薄弱点不会重复加分。
-- 仅保存复盘或请求点评不会加分。
-
-### 学习档案页
+### 6. 学习档案页
 
 路由：
 
 ```text
 /profile
 ```
-
-学习档案用于展示个人学习状态和用户画像。
 
 主要模块：
 
@@ -557,152 +822,9 @@ AI 复盘流程：
 - 个性化策略。
 - 个人偏好设置。
 
-学习等级来源：
+## 十一、数据存储说明
 
-- 学习计划任务积分。
-- 薄弱点复盘积分。
-- 当前用户的累计积分。
-
-用户画像来源：
-
-- 用户手动填写的偏好。
-- 会话历史。
-- 薄弱点记录。
-- 当前学习计划。
-- 常用答疑模式。
-
-画像会影响：
-
-- 普通答疑提示词。
-- RAG 答疑提示词。
-- 学习计划生成。
-- 学习档案建议。
-
-## RAG 说明
-
-RAG 是 Retrieval-Augmented Generation，即“检索增强生成”。本项目中的作用是：先从本地知识库中找到和问题相关的资料片段，再把这些片段作为上下文交给大模型回答。
-
-### 当前默认检索方式
-
-默认使用关键词检索：
-
-```powershell
-$env:RAG_RETRIEVER_TYPE="keyword"
-```
-
-优点：
-
-- 不需要额外 Embedding 服务。
-- 不会把本地 Markdown 资料发送给向量化接口。
-- 更适合当前本地资料量不大的阶段。
-
-关键词 RAG 流程：
-
-```text
-读取 Markdown 资料
-→ 解析元数据
-→ 文本切片
-→ 建立关键词索引
-→ 用户提问
-→ 检索相关片段
-→ 拼接上下文
-→ 调用大模型回答
-→ 返回回答和资料来源
-```
-
-### 可选向量检索
-
-如果后续升级为真正的向量检索，可以配置：
-
-```powershell
-$env:RAG_RETRIEVER_TYPE="vector"
-$env:EMBEDDING_API_KEY="你的 Embedding API Key"
-$env:EMBEDDING_BASE_URL="你的 Embedding 服务地址"
-$env:EMBEDDING_MODEL="你的 Embedding 模型名"
-```
-
-注意：
-
-- DeepSeek 聊天模型 Key 不等于 Embedding Key。
-- 如果没有单独的 Embedding 服务，请继续使用 `keyword`。
-- 向量检索会把资料切片发送给 Embedding 服务生成向量。
-
-向量 RAG 流程：
-
-```text
-读取 Markdown 资料
-→ 解析元数据
-→ 文本切片
-→ 调用 Embedding 服务生成向量
-→ 写入 Chroma
-→ 用户提问
-→ 向量检索相关片段
-→ 拼接上下文
-→ 调用大模型回答
-→ 返回回答和资料来源
-```
-
-### RAG 验证方式
-
-可以通过接口查看命中的资料片段：
-
-```text
-GET /api/rag/search?q=结构体怎么定义
-```
-
-如果返回的来源和问题相关，说明检索生效。
-
-如果 RAG 回答里出现来源卡片，并且来源能跳转到知识库详情页，说明前后端链路已经打通。
-
-## 知识库 Markdown 格式
-
-建议每个 Markdown 文件顶部添加元数据：
-
-```markdown
----
-title: C 语言指针
-topic: C语言
-level: 初级
-tags: [指针, 地址, 解引用]
----
-
-# C 语言指针
-
-正文内容...
-```
-
-元数据用途：
-
-- 知识库卡片展示。
-- 资料主题筛选。
-- RAG 来源展示。
-- 学习计划生成。
-- 后续知识推荐。
-
-当前系统内置资料位于：
-
-```text
-backend/knowledge
-```
-
-已包含示例方向：
-
-- C 语言结构体
-- C 语言指针
-- Go goroutine
-- Go channel
-- Java 面向对象
-- Java 集合
-- Python 基础
-- Rust 所有权
-- Rust Result
-- Vue 3 响应式
-- Vue 3 组件通信
-- 算法复杂度
-
-## 数据存储说明
-
-### SQLite
+### 1. SQLite
 
 默认数据库：
 
@@ -712,15 +834,15 @@ backend/data/programming_assistant.db
 
 保存内容：
 
-- 用户账号
-- 用户 token
-- 用户画像
-- 会话历史
-- 薄弱点记录
-- 学习计划
-- 积分信息
+- 用户账号。
+- 用户 token。
+- 用户画像。
+- 会话历史。
+- 薄弱点记录。
+- 学习计划。
+- 积分信息。
 
-### Markdown 资料
+### 2. Markdown 资料
 
 系统资料：
 
@@ -734,23 +856,31 @@ backend/knowledge/*.md
 backend/user_knowledge/user_<用户ID>/*.md
 ```
 
-### RAG 索引
+### 3. Chroma 向量库
 
-关键词索引：
-
-```text
-backend/data/rag_index.json
-```
-
-向量索引：
+向量库存储目录：
 
 ```text
 backend/vector_store
 ```
 
-后端启动时会自动重建知识库索引。
+向量库内容：
 
-## API 概览
+- 系统知识库 chunk 向量。
+- 用户上传资料 chunk 向量。
+- chunk metadata。
+
+### 4. 关键词兜底索引
+
+关键词索引文件：
+
+```text
+backend/data/rag_index.json
+```
+
+该索引用于向量检索失败后的兜底检索。
+
+## 十二、API 概览
 
 ### 基础接口
 
@@ -834,9 +964,20 @@ POST   /api/mistakes/<id>/move
 POST   /api/mistakes/reorder
 ```
 
-## 常见问题
+## 十三、常用命令
 
-### 前端请求失败
+```bash
+npm run dev:backend       # 启动 Flask 后端
+npm run dev:frontend      # 启动 Vue 前端
+npm run build             # 构建前端
+npm run build:frontend    # 构建前端
+npm run start:backend     # 启动 Flask 后端
+python -m compileall backend/app
+```
+
+## 十四、常见问题
+
+### 1. 前端请求失败
 
 先确认后端是否启动：
 
@@ -844,9 +985,7 @@ POST   /api/mistakes/reorder
 http://localhost:3000/api/health
 ```
 
-如果后端未启动，前端页面会无法访问 `/api`。
-
-### DeepSeek 提示缺少 Key
+### 2. DeepSeek 提示缺少 Key
 
 如果看到：
 
@@ -854,7 +993,7 @@ http://localhost:3000/api/health
 缺少 LLM_API_KEY 或 DEEPSEEK_API_KEY 环境变量
 ```
 
-说明启动后端的终端没有读取到 Key。
+说明启动后端的终端没有读取到聊天模型 Key。
 
 检查：
 
@@ -865,17 +1004,40 @@ echo $env:LLM_BASE_URL
 echo $env:LLM_MODEL
 ```
 
-注意：临时环境变量只对当前 PowerShell 窗口有效。设置完 Key 后，必须在同一个窗口启动后端。
+### 3. Embedding 配置失败
 
-### RAG 没有命中来源
+如果后端控制台出现：
+
+```text
+[rag] vector index rebuild skipped
+```
+
+或：
+
+```text
+[rag] vector search fallback
+```
+
+说明 Chroma + Embedding 链路没有正常工作，系统正在回退关键词检索。
+
+需要检查：
+
+```powershell
+echo $env:EMBEDDING_API_KEY
+echo $env:EMBEDDING_BASE_URL
+echo $env:EMBEDDING_MODEL
+echo $env:RAG_RETRIEVER_TYPE
+```
+
+### 4. RAG 没有命中来源
 
 可能原因：
 
 - 问题和知识库资料关系不强。
 - 本地资料太少。
 - `RAG_MIN_SCORE` 设置过高。
-- 当前关键词检索对同义表达不敏感。
-- 上传或修改资料后后端没有重新建立索引。
+- Embedding 服务调用失败。
+- Chroma 索引没有成功构建。
 
 可以用这个接口验证：
 
@@ -883,7 +1045,7 @@ echo $env:LLM_MODEL
 GET /api/rag/search?q=你的问题
 ```
 
-### 自动沉淀薄弱点没有出现
+### 5. 自动沉淀薄弱点没有出现
 
 检查：
 
@@ -893,19 +1055,33 @@ GET /api/rag/search?q=你的问题
 - 是否和已有薄弱点重复。
 - 模型接口是否可用。
 
-### 前端构建提示 Node 版本
+## 十五、适合展示的完整流程
 
-如果看到：
+### 流程一：RAG 知识库增强答疑
 
 ```text
-Vite requires Node.js version 20.19+ or 22.12+
+启动后端并完成 Chroma 索引构建
+→ 进入智能答疑
+→ 使用 RAG 答疑
+→ 提问和资料相关的问题
+→ 查看流式回答
+→ 查看参考来源
+→ 点击来源进入知识库详情页
 ```
 
-建议升级 Node.js 到 `20.19+` 或 `22.12+`。
+### 流程二：个人资料参与 RAG
 
-## 当前适合展示的完整流程
+```text
+登录
+→ 进入知识库
+→ 上传个人 Markdown 资料
+→ 后端重建 Chroma 索引
+→ 进入智能答疑
+→ 使用 RAG 提问个人资料相关问题
+→ 命中个人资料来源
+```
 
-### 流程一：答疑到薄弱点
+### 流程三：答疑到薄弱点
 
 ```text
 登录
@@ -920,12 +1096,11 @@ Vite requires Node.js version 20.19+ or 22.12+
 → 标记掌握获得积分
 ```
 
-### 流程二：知识库到学习计划
+### 流程四：知识库到学习计划
 
 ```text
 登录
 → 进入知识库
-→ 浏览资料卡片
 → 勾选几项资料
 → 生成学习计划
 → 回到首页
@@ -934,38 +1109,13 @@ Vite requires Node.js version 20.19+ or 22.12+
 → 完成 100% 后生成阶段总结
 ```
 
-### 流程三：RAG 知识库增强答疑
+## 十六、后续可扩展方向
 
-```text
-进入知识库确认资料存在
-→ 进入智能答疑
-→ 使用 RAG 答疑
-→ 提问和资料相关的问题
-→ 查看回答
-→ 查看命中来源
-→ 点击来源进入资料详情
-```
-
-### 流程四：个人资料上传
-
-```text
-登录
-→ 进入知识库
-→ 点击上传个人资料
-→ 在弹窗中选择 Markdown 文件或粘贴内容
-→ 上传成功
-→ 在知识库中看到个人资料卡片
-→ 使用 RAG 答疑时参与检索
-```
-
-## 后续可扩展方向
-
-- 引入独立 Embedding 服务，完善 Chroma 向量检索。
-- 增加 rerank，提高 RAG 命中质量。
+- 引入 rerank 模型，提高 RAG 命中质量。
+- 增加知识图谱，展示知识点前置关系。
 - 将薄弱点和知识库资料建立推荐关系。
-- 做知识图谱，展示知识点前置关系。
-- 增加资料导入管理，例如批量上传、资料分组、资料启用禁用。
-- 增加更完整的用户权限和密码安全策略。
+- 增加批量上传、资料分组、资料启用禁用。
+- 增加更完整的权限体系和密码安全策略。
 - 将答疑、检索、薄弱点沉淀、复盘和学习计划升级为 Agent 工作流。
 - 增加学习报告导出能力。
 - 增加课程化路线，把知识库资料组织成章节。

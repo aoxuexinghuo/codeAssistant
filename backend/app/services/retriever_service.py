@@ -34,11 +34,11 @@ def retrieve_documents(
     min_score: float | None = None,
     user_id: int | None = None,
 ) -> list[dict]:
-    if settings.rag_retriever_type == "vector" and user_id is None:
+    if settings.rag_retriever_type == "vector":
         try:
-            from .vector_store_service import search_vector_store
+            from .vector_store_service import search_vector_store_for_user
 
-            return search_vector_store(question=question, top_k=top_k, min_score=min_score)
+            return search_vector_store_for_user(question=question, top_k=top_k, min_score=min_score, user_id=user_id)
         except Exception as error:
             print("[rag] vector search fallback", {"detail": str(error)})
 

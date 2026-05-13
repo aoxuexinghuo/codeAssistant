@@ -31,7 +31,7 @@ class Settings:
     user_knowledge_dir: Path = USER_KNOWLEDGE_DIR
     rag_index_path: Path = DATA_DIR / "rag_index.json"
     vector_store_dir: Path = VECTOR_DIR
-    rag_retriever_type: str = os.getenv("RAG_RETRIEVER_TYPE", "keyword")
+    rag_retriever_type: str = os.getenv("RAG_RETRIEVER_TYPE", "vector")
     rag_top_k: int = int(os.getenv("RAG_TOP_K", "3"))
     rag_min_score: float = float(os.getenv("RAG_MIN_SCORE", "0.25"))
     rag_chunk_size: int = int(os.getenv("RAG_CHUNK_SIZE", "500"))

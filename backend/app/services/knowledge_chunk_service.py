@@ -41,16 +41,34 @@ def split_text(text: str) -> list[str]:
     return [chunk for chunk in chunks if chunk]
 
 
-def load_knowledge_chunks(user_id: int | None = None) -> list[dict]:
+def load_knowledge_chunks(user_id: int | None = None, include_all_users: bool = False) -> list[dict]:
     documents: list[dict] = []
 
-    knowledge_dirs = [settings.knowledge_dir]
+    knowledge_dirs: list[tuple[Path, str, int]] = [(settings.knowledge_dir, "system", 0)]
     if user_id is not None:
         user_dir = settings.user_knowledge_dir / f"user_{user_id}"
         user_dir.mkdir(parents=True, exist_ok=True)
-        knowledge_dirs.append(user_dir)
+        knowledge_dirs.append((user_dir, "user", user_id))
 
-    for knowledge_dir in knowledge_dirs:
+    if include_all_users:
+        for user_dir in sorted(settings.user_knowledge_dir.glob("user_*")):
+            if not user_dir.is_dir():
+                continue
+
+            try:
+                owner_id = int(user_dir.name.replace("user_", "", 1))
+            except ValueError:
+                continue
+
+            knowledge_dirs.append((user_dir, "user", owner_id))
+
+    seen_dirs: set[Path] = set()
+    for knowledge_dir, scope, owner_id in knowledge_dirs:
+        resolved_dir = knowledge_dir.resolve()
+        if resolved_dir in seen_dirs:
+            continue
+        seen_dirs.add(resolved_dir)
+
         for file_path in sorted(knowledge_dir.glob("*.md")):
             raw_content = file_path.read_text(encoding="utf-8")
             metadata, content = parse_markdown_document(raw_content)
@@ -59,7 +77,7 @@ def load_knowledge_chunks(user_id: int | None = None) -> list[dict]:
             for index, chunk in enumerate(split_text(content), start=1):
                 documents.append(
                     {
-                        "id": f"{file_path.name}#{index}",
+                        "id": f"{scope}:{owner_id}:{file_path.name}#{index}",
                         "title": title,
                         "file": file_path.name,
                         "chunkIndex": index,
@@ -67,6 +85,8 @@ def load_knowledge_chunks(user_id: int | None = None) -> list[dict]:
                         "topic": metadata.get("topic") or "",
                         "level": metadata.get("level") or "",
                         "tags": metadata.get("tags") or [],
+                        "scope": scope,
+                        "userId": owner_id,
                     }
                 )
 
